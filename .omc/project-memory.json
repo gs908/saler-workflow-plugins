@@ -1,0 +1,176 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1773976659776,
+  "projectRoot": "D:\\workspaces\\agentic-workspace\\saler-workflow-plugins",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "express",
+        "version": "4.16.0",
+        "category": "backend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "start": "node ./bin/www",
+      "dev": "nodemon ./bin/www"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": "CommonJS",
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "bin",
+      "public",
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "bin": {
+      "path": "bin",
+      "purpose": "Executable scripts",
+      "fileCount": 1,
+      "lastAccessed": 1773976659735,
+      "keyFiles": [
+        "www"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 0,
+      "lastAccessed": 1773976659736,
+      "keyFiles": []
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1773976659748,
+      "keyFiles": [
+        "app.js"
+      ]
+    },
+    "src\\routes": {
+      "path": "src\\routes",
+      "purpose": "Route handlers",
+      "fileCount": 2,
+      "lastAccessed": 1773976659749,
+      "keyFiles": [
+        "index.js",
+        "users.js"
+      ]
+    },
+    "src\\views": {
+      "path": "src\\views",
+      "purpose": "View templates",
+      "fileCount": 3,
+      "lastAccessed": 1773976659750,
+      "keyFiles": [
+        "error.hbs",
+        "index.hbs",
+        "layout.hbs"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src\\app.js",
+      "accessCount": 8,
+      "lastAccessed": 1773977331984,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 3,
+      "lastAccessed": 1773979506154,
+      "type": "file"
+    },
+    {
+      "path": "bin\\www",
+      "accessCount": 2,
+      "lastAccessed": 1773977086086,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1773977190071,
+      "type": "file"
+    },
+    {
+      "path": "src\\routes\\test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1773977239848,
+      "type": "file"
+    },
+    {
+      "path": "AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1773979787661,
+      "type": "file"
+    },
+    {
+      "path": "bin\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1773979813639,
+      "type": "file"
+    },
+    {
+      "path": "src\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1773979814049,
+      "type": "file"
+    },
+    {
+      "path": "src\\routes\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1773979814421,
+      "type": "file"
+    },
+    {
+      "path": "src\\views\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1773979814780,
+      "type": "file"
+    },
+    {
+      "path": "public\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1773979815160,
+      "type": "file"
+    },
+    {
+      "path": ".env.example",
+      "accessCount": 1,
+      "lastAccessed": 1773979951512,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

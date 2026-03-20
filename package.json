@@ -1,0 +1,36 @@
+{
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www",
+    "dev": "nodemon --exec \"node -r ts-node/register\" ./bin/www",
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
+    "debug": "~2.6.9",
+    "express": "~4.16.0",
+    "hbs": "^4.1.1",
+    "http-errors": "~1.6.2",
+    "mockjs": "^1.1.0",
+    "morgan": "~1.9.0",
+    "route-scanner": "^0.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/express-serve-static-core": "^5.1.1",
+    "@types/node": "^25.5.0",
+    "nodemon": "^2.0.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "name": "saler-workflow-plugins",
+  "description": "fake api service, develop init faster!",
+  "keywords": [
+    "fake-server-generator",
+    "fake-server",
+    "express"
+  ]
+}

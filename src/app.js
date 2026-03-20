@@ -1,0 +1,83 @@
+// Register ts-node for TypeScript support
+require('ts-node').register({
+    transpileOnly: true,
+    compilerOptions: {
+        module: 'commonjs',
+        target: 'ES2020'
+    }
+});
+
+const createError = require('http-errors'),
+    express = require('express'),
+    cookieParser = require('cookie-parser'),
+    logger = require('morgan'),
+    cors=require('cors'),
+    app = express(),
+    path = require('path'),
+    fs = require('fs'),
+    scanner = require('route-scanner');
+
+
+// view engine setup
+app.engine('hbs',require('hbs').__express);
+app.set('view engine', 'hbs');
+app.set('views', path.join(__dirname, 'views'));
+
+
+app.use(logger('saler-workflow-plugins'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, '../public')));
+
+//  add cors
+app.use(cors());
+
+//  load routers
+scanner(app,{
+    debug:false,
+    routerPath: path.join(__dirname, 'routes'),
+    prefix:'saler-workflow-plugins',   //  modifier
+    replacePaths:[{
+        from:'/index',
+        to:'/'
+    }],
+    /*extraMaps:[{
+        rootPath:path.join(__dirname, '/other-paths'),
+        fileMaps:[{
+            url:'/admin',
+            file:'admin.js'
+        }]
+    }]*/
+});
+
+// Manual TypeScript route scanning (route-scanner doesn't support .ts)
+const routesPath = path.join(__dirname, 'routes');
+const prefix = 'saler-workflow-plugins';
+
+function scanTsRoutes(dir, urlPrefix = '') {
+    const files = fs.readdirSync(dir, { withFileTypes: true });
+    for (const file of files) {
+        const fullPath = path.join(dir, file.name);
+        if (file.isDirectory()) {
+            scanTsRoutes(fullPath, `${urlPrefix}/${file.name}`);
+        } else if (file.name.endsWith('.ts')) {
+            const routeName = file.name.replace('.ts', '');
+            const routeUrl = `${urlPrefix}/${routeName}`.replace('/index', '/');
+            const fullUrl = `/${prefix}${routeUrl}`;
+            const router = require(fullPath);
+            // Handle ES module default export
+            const routeModule = router.default || router;
+            app.use(fullUrl, routeModule);
+            console.log(`[TS] Registered router [${fullUrl}] -> ${fullPath}`);
+        }
+    }
+}
+scanTsRoutes(routesPath);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  next(createError(404));
+});
+
+module.exports = app;
