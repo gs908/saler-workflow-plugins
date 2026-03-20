@@ -112,9 +112,27 @@
       "type": "file"
     },
     {
+      "path": "src\\AGENTS.md",
+      "accessCount": 3,
+      "lastAccessed": 1773980617121,
+      "type": "file"
+    },
+    {
+      "path": "AGENTS.md",
+      "accessCount": 3,
+      "lastAccessed": 1773980618396,
+      "type": "file"
+    },
+    {
       "path": "bin\\www",
       "accessCount": 2,
       "lastAccessed": 1773977086086,
+      "type": "file"
+    },
+    {
+      "path": "src\\routes\\AGENTS.md",
+      "accessCount": 2,
+      "lastAccessed": 1773980617551,
       "type": "file"
     },
     {
@@ -130,27 +148,9 @@
       "type": "file"
     },
     {
-      "path": "AGENTS.md",
-      "accessCount": 1,
-      "lastAccessed": 1773979787661,
-      "type": "file"
-    },
-    {
       "path": "bin\\AGENTS.md",
       "accessCount": 1,
       "lastAccessed": 1773979813639,
-      "type": "file"
-    },
-    {
-      "path": "src\\AGENTS.md",
-      "accessCount": 1,
-      "lastAccessed": 1773979814049,
-      "type": "file"
-    },
-    {
-      "path": "src\\routes\\AGENTS.md",
-      "accessCount": 1,
-      "lastAccessed": 1773979814421,
       "type": "file"
     },
     {
@@ -169,6 +169,12 @@
       "path": ".env.example",
       "accessCount": 1,
       "lastAccessed": 1773979951512,
+      "type": "file"
+    },
+    {
+      "path": "src\\routes\\api\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1773980617975,
       "type": "file"
     }
   ],

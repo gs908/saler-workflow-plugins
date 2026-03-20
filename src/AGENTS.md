@@ -12,8 +12,8 @@
 |------|-------------|
 | `app.js` | Express 应用主文件，包含中间件配置和路由扫描 |
 | `routes/index.js` | 首页路由 |
-| `routes/users.js` | 用户相关 API 路由 |
-| `routes/test.ts` | TypeScript 示例路由 |
+| `routes/api/users.js` | 用户相关 API 路由 |
+| `routes/api/test.ts` | TypeScript 示例路由 |
 | `views/error.hbs` | 错误页面模板 |
 | `views/index.hbs` | 首页模板 |
 | `views/layout.hbs` | 布局模板 |
@@ -22,7 +22,7 @@
 
 | Directory | Purpose |
 |-----------|---------|
-| `routes/` | 路由文件 (JS/TS) |
+| `routes/` | 路由文件 (JS/TS)，包含 `api/` 子目录 |
 | `views/` | Handlebars 模板文件 |
 
 ## For AI Agents
@@ -35,7 +35,8 @@
 ### 路由约定
 - JS 路由: route-scanner 自动扫描
 - TS 路由: 手动扫描，需 `export default`
-- 路径格式: `/saler-workflow-plugins/{route-name}`
+- 路径格式: `/saler-plugins/{route-name}`
+- API 路由目录: `src/routes/api/`
 
 ### 路径说明
 - `__dirname` 指向 `src/`

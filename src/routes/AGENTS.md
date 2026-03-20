@@ -11,15 +11,21 @@
 | File | Description |
 |------|-------------|
 | `index.js` | 首页路由，渲染 index.hbs |
-| `users.js` | 用户 API 路由，包含 Mock 数据 |
-| `test.ts` | TypeScript 示例路由 |
+| `api/users.js` | 用户 API 路由，包含 Mock 数据 |
+| `api/test.ts` | TypeScript 示例路由 |
+
+## Subdirectories
+
+| Directory | Purpose |
+|-----------|---------|
+| `api/` | API 路由文件 (见 `api/AGENTS.md`) |
 
 ## For AI Agents
 
 ### 新建路由
 1. 创建文件: `src/routes/{name}.js` 或 `src/routes/{name}.ts`
 2. 导出 router: `module.exports = router` (JS) 或 `export default router` (TS)
-3. 路由自动注册，URL: `/saler-workflow-plugins/{name}`
+3. 路由自动注册，URL: `/saler-plugins/{name}`
 
 ### TypeScript 模板
 ```typescript
@@ -32,8 +38,8 @@ export default router;
 ```
 
 ### 特殊路由
-- `index.js` → `/saler-workflow-plugins/` (replace /index → /)
-- `users.js` → `/saler-workflow-plugins/users`
+- `index.js` → `/saler-plugins/` (replace /index → /)
+- `api/users.js` → `/saler-plugins/users`
 
 ### 注意事项
 - route-scanner 只扫描 .js 文件

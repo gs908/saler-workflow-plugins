@@ -34,13 +34,14 @@ Fake API 服务，用于快速开发测试。提供路由自动扫描、HBS 模�
 ### 注意事项
 - 使用 pnpm 作为包管理器
 - TypeScript 路由需手动扫描 (route-scanner 不支持 .ts)
-- 所有 JS/TS 路由文件放在 `src/routes/` 目录
+- 路由文件放在 `src/routes/` 目录
+- API 路由放在 `src/routes/api/` 目录
 - views 模板放在 `src/views/` 目录
 
 ### 架构说明
 - 应用入口: `bin/www` → `src/app.js`
 - 路由扫描: route-scanner (JS) + 手动扫描 (TS)
-- 路由前缀: `/saler-workflow-plugins`
+- 路由前缀: `/saler-plugins`
 
 ## Dependencies
 
