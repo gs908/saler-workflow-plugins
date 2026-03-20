@@ -32,12 +32,12 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 //  add cors
 app.use(cors());
-
+const prefix = 'saler-plugins';
 //  load routers
 scanner(app,{
     debug:false,
     routerPath: path.join(__dirname, 'routes'),
-    prefix:'saler-workflow-plugins',   //  modifier
+    prefix:prefix,   //  modifier
     replacePaths:[{
         from:'/index',
         to:'/'
@@ -53,7 +53,7 @@ scanner(app,{
 
 // Manual TypeScript route scanning (route-scanner doesn't support .ts)
 const routesPath = path.join(__dirname, 'routes');
-const prefix = 'saler-workflow-plugins';
+
 
 function scanTsRoutes(dir, urlPrefix = '') {
     const files = fs.readdirSync(dir, { withFileTypes: true });
