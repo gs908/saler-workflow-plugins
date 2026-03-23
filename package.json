@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
+    "start:tsx": "tsx ./bin/www",
     "dev": "nodemon --exec \"node -r ts-node/register\" ./bin/www",
+    "dev:tsx": "tsx watch ./bin/www",
     "build": "tsc",
     "type-check": "tsc --noEmit"
   },
@@ -29,6 +31,7 @@
     "@types/uuid": "^11.0.0",
     "nodemon": "^2.0.4",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "name": "saler-workflow-plugins",

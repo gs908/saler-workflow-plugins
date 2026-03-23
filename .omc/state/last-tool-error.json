@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd D:/workspaces/agentic-workspace/saler-workflow-plugins && git fetch origin main 2>&1\"}",
-  "error": "Exit code 128\nfatal: unable to access 'https://github.com/gs908/saler-workflow-plugins.git/': Failed to connect to github.com port 443 after 21133 ms: Couldn't connect to server\n\nfatal: unable to access 'https://github.com/gs908/saler-workflow-plugins.git/': Failed to connect to github.com port 443 after 21133 ms: Couldn't connect to server",
-  "timestamp": "2026-03-20T04:16:23.194Z",
+  "tool_input_preview": "{\"command\":\"cd D:/workspaces/agentic-workspace/saler-workflow-plugins && pnpm start:tsx 2>&1 &\\nsleep 2\\ncurl -s http://localhost:5699/saler-plugins/ | head -1\\nkill %1 2>/dev/null\"}",
+  "error": "Exit code 1\nsleep: unknown option -- s\nTry 'sleep --help' for more information.\n\nsleep: unknown option -- s\nTry 'sleep --help' for more information.",
+  "timestamp": "2026-03-20T05:36:26.196Z",
   "retry_count": 1
 }
