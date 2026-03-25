@@ -1,0 +1,119 @@
+
+<link rel="stylesheet" href="/stylesheets/claude-tasks.css" />
+
+<div class="ct-page">
+  <!-- 顶部标题栏 -->
+  <div class="ct-header">
+    <div class="ct-header-left">
+      <h2 class="ct-title">Claude Code 任务管理</h2>
+      <span class="ct-subtitle">通过 API 调用 Claude Code 执行任务</span>
+    </div>
+    <div class="ct-header-actions">
+      <button class="ct-btn ct-btn-primary" id="btnNewTask">+ 新建任务</button>
+      <button class="ct-btn ct-btn-ghost" id="btnRefresh">刷新列表</button>
+    </div>
+  </div>
+
+  <!-- 主体区域: 左侧列表 + 右侧详情 -->
+  <div class="ct-main">
+    <!-- 左侧任务列表 -->
+    <div class="ct-sidebar">
+      <div class="ct-sidebar-header">
+        <span>任务列表</span>
+        <span class="ct-task-count" id="taskCount">0</span>
+      </div>
+      <div class="ct-task-list" id="taskList">
+        <div class="ct-empty-state" id="emptyState">
+          <p>暂无任务</p>
+          <p class="ct-empty-hint">点击「新建任务」开始</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧详情/输出 -->
+    <div class="ct-detail">
+      <div class="ct-detail-placeholder" id="detailPlaceholder">
+        <p>选择左侧任务查看详情</p>
+        <p class="ct-empty-hint">或新建一个任务</p>
+      </div>
+
+      <div class="ct-detail-content" id="detailContent" style="display:none;">
+        <!-- 任务信息 -->
+        <div class="ct-task-info">
+          <div class="ct-info-row">
+            <span class="ct-info-label">任务 ID</span>
+            <span class="ct-info-value" id="infoTaskId">-</span>
+          </div>
+          <div class="ct-info-row">
+            <span class="ct-info-label">状态</span>
+            <span id="infoStatus">-</span>
+          </div>
+          <div class="ct-info-row">
+            <span class="ct-info-label">Skill</span>
+            <span class="ct-info-value" id="infoSkill">-</span>
+          </div>
+          <div class="ct-info-row">
+            <span class="ct-info-label">工作目录</span>
+            <span class="ct-info-value ct-mono" id="infoWorkDir">-</span>
+          </div>
+          <div class="ct-info-row">
+            <span class="ct-info-label">Prompt</span>
+            <span class="ct-info-value" id="infoPrompt">-</span>
+          </div>
+          <div class="ct-info-row">
+            <span class="ct-info-label">开始时间</span>
+            <span class="ct-info-value" id="infoStartTime">-</span>
+          </div>
+          <div class="ct-info-actions" id="infoActions">
+            <button class="ct-btn ct-btn-danger" id="btnCancelTask" style="display:none;">取消任务</button>
+          </div>
+        </div>
+
+        <!-- 输出区域 -->
+        <div class="ct-output-header">
+          <span>Claude 输出</span>
+          <button class="ct-btn ct-btn-sm ct-btn-ghost" id="btnClearOutput">清空</button>
+        </div>
+        <div class="ct-output" id="outputArea">
+          <div class="ct-output-content" id="outputContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 新建任务弹窗 -->
+<div class="ct-modal-overlay" id="modalOverlay" style="display:none;">
+  <div class="ct-modal">
+    <div class="ct-modal-header">
+      <h3>新建任务</h3>
+      <button class="ct-modal-close" id="btnCloseModal">&times;</button>
+    </div>
+    <form id="newTaskForm">
+      <div class="ct-form-group">
+        <label class="ct-label">任务描述 <span class="ct-required">*</span></label>
+        <textarea class="ct-input ct-textarea" id="inputPrompt" placeholder="描述你要 Claude 做什么..." rows="4" required></textarea>
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">工作目录 <span class="ct-required">*</span></label>
+        <input class="ct-input" type="text" id="inputWorkDir" placeholder="例如: C:/Users/xxx/projects/my-project" required />
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">Skill</label>
+        <select class="ct-input ct-select" id="inputSkill"></select>
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">上传文件</label>
+        <input class="ct-input ct-file" type="file" id="inputFiles" multiple accept=".md,.txt,.doc,.docx,.json,.csv,.yaml,.yml,.xml,.html,.js,.ts,.java,.py" />
+        <span class="ct-hint">支持 md, txt, doc, docx, json, csv 等格式，最多 10 个文件</span>
+      </div>
+      <div class="ct-modal-footer">
+        <button type="button" class="ct-btn ct-btn-ghost" id="btnCancelModal">取消</button>
+        <button type="submit" class="ct-btn ct-btn-primary">开始执行</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="/javascripts/claude-tasks.js"></script>

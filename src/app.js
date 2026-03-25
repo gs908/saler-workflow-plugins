@@ -88,4 +88,15 @@ app.use(function(req, res, next) {
   next(createError(404));
 });
 
+// error handler
+app.use(function(err, req, res, next) {
+  var status = err.status || 500;
+  if (req.headers.accept && req.headers.accept.indexOf('application/json') !== -1) {
+    res.status(status).json({ error: err.message, status: status });
+  } else {
+    res.status(status);
+    res.render('error', { message: err.message, error: err });
+  }
+});
+
 module.exports = app;
