@@ -35,9 +35,9 @@ const router = Router();
  */
 router.post('/meeting-analysis', async (req: Request, res: Response) => {
   try {
-    const { meetingName, txtUrl, waitForCompletion = false } = req.body;
+    const { meetingName, txtUrl, fileId, waitForCompletion = false } = req.body;
 
-    // 参数校验
+    // 参数校验：meetingName 必填，txtUrl 和 fileId 二选一
     if (!meetingName || typeof meetingName !== 'string') {
       return res.status(400).json({
         success: false,
@@ -45,18 +45,18 @@ router.post('/meeting-analysis', async (req: Request, res: Response) => {
       });
     }
 
-    if (!txtUrl || typeof txtUrl !== 'string') {
+    if (!txtUrl && !fileId) {
       return res.status(400).json({
         success: false,
-        error: '缺少必需参数: txtUrl',
+        error: '缺少必需参数: txtUrl 或 fileId',
       });
     }
 
-    console.log(`[API] 执行会议分析: ${meetingName}, 等待完成: ${waitForCompletion}`);
+    console.log(`[API] 执行会议分析: ${meetingName}, fileId: ${fileId || '-'}, 等待完成: ${waitForCompletion}`);
 
     // 如果不需要等待，直接返回 Coze API 响应
     if (!waitForCompletion) {
-      const result: WorkflowExecuteResponse = await executeMeetingAnalysis(meetingName, txtUrl);
+      const result: WorkflowExecuteResponse = await executeMeetingAnalysis(meetingName, txtUrl, fileId);
       return res.json({
         success: true,
         data: result,
@@ -64,7 +64,7 @@ router.post('/meeting-analysis', async (req: Request, res: Response) => {
     }
 
     // 执行并等待完成
-    const result: WorkflowRunHistory = await executeMeetingAnalysisAndWait(meetingName, txtUrl, {
+    const result: WorkflowRunHistory = await executeMeetingAnalysisAndWait(meetingName, txtUrl, undefined, fileId, {
       maxAttempts: 30,
       interval: 2000,
     });

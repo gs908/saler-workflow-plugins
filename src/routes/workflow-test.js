@@ -20,12 +20,12 @@ router.get('/', async (req, res) => {
  */
 router.post('/save', async (req, res) => {
     try {
-        const { meetingName, txtUrl, executeResponse } = req.body;
+        const { meetingName, txtUrl, fileId, executeResponse } = req.body;
         const history = readHistory();
 
         const record = {
             timestamp: new Date().toISOString(),
-            input: { txtUrl, meetingName },
+            input: { txtUrl, fileId, meetingName },
             executeResponse,
             asyncResult: null
         };
