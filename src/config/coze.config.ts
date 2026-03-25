@@ -28,6 +28,7 @@ const getConfig = () => {
       // 会议分析工作流
       meetingAnalysis: {
         workflowId: meetingWorkflowId || '',
+        isAsync: true,
       },
     },
   };
