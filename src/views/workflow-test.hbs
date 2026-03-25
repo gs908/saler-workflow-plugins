@@ -42,14 +42,18 @@
     <!-- 倒计时区域 -->
     <div class="timer-section">
         <h2>异步结果获取</h2>
+        <div class="form-group">
+            <label for="manualExecuteId">手动输入 execute_id:</label>
+            <input type="text" id="manualExecuteId" placeholder="手动输入用于测试" />
+        </div>
         <div class="timer-display">
             <span class="label">剩余时间:</span>
             <span id="timer">05:00</span>
         </div>
         <button id="fetchResultBtn" type="button" disabled>获取异步结果</button>
-        <div class="form-group">
-            <label for="asyncResult">异步返回:</label>
-            <textarea id="asyncResult" rows="6" placeholder="获取后显示结果" readonly></textarea>
+        <div class="result-item">
+            <span class="label">异步输出:</span>
+            <pre id="asyncResult">-</pre>
         </div>
     </div>
 </div>
@@ -101,7 +105,7 @@ button:disabled {
     margin-right: 10px;
 }
 
-#output {
+#output, #asyncResult {
     background: #f5f5f5;
     padding: 10px;
     max-height: 200px;
@@ -126,6 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const debugUrlEl = document.getElementById('debugUrl');
     const outputEl = document.getElementById('output');
     const asyncResultEl = document.getElementById('asyncResult');
+    const manualExecuteIdEl = document.getElementById('manualExecuteId');
     const timerEl = document.getElementById('timer');
 
     let currentTimestamp = null;
@@ -271,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 获取异步结果
     fetchResultBtn.addEventListener('click', async function() {
-        const executeId = executeIdEl.textContent;
+        const executeId = manualExecuteIdEl.value.trim() || executeIdEl.textContent;
         if (!executeId || executeId === '-') {
             alert('无可用的 execute_id');
             return;
