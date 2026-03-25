@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 // Register ts-node for TypeScript support
 require('ts-node').register({
     transpileOnly: true,
@@ -74,6 +77,10 @@ function scanTsRoutes(dir, urlPrefix = '') {
     }
 }
 scanTsRoutes(routesPath);
+
+// Manual route for workflow-test page
+const workflowTestRouter = require('./routes/workflow-test');
+app.use('/workflow-test', workflowTestRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
