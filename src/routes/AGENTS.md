@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-03-20 | Updated: 2026-03-20 -->
+<!-- Generated: 2026-03-20 | Updated: 2026-03-25 -->
 
 # routes
 
@@ -11,14 +11,16 @@
 | File | Description |
 |------|-------------|
 | `index.js` | 首页路由，渲染 index.hbs |
+| `workflow-test.js` | 工作流测试页面路由 |
 | `api/users.js` | 用户 API 路由，包含 Mock 数据 |
+| `api/coze.ts` | Coze 工作流 API 路由 |
 | `api/test.ts` | TypeScript 示例路由 |
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
-| `api/` | API 路由文件 (见 `api/AGENTS.md`) |
+| `api/` | API 路由文件，支持多层级嵌套 (见 `api/AGENTS.md`) |
 
 ## For AI Agents
 
@@ -39,10 +41,13 @@ export default router;
 
 ### 特殊路由
 - `index.js` → `/saler-plugins/` (replace /index → /)
-- `api/users.js` → `/saler-plugins/users`
+- `workflow-test.js` → `/saler-plugins/workflow-test`
+- `api/coze.ts` → `/saler-plugins/api/coze`
+- `api/users.js` → `/saler-plugins/api/users`
 
 ### 注意事项
 - route-scanner 只扫描 .js 文件
 - .ts 文件需要手动扫描处理
+- 手动注册的路由放在 route-scanner 扫描之后
 
 <!-- MANUAL: -->

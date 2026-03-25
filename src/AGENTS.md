@@ -1,29 +1,54 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-03-20 | Updated: 2026-03-20 -->
+<!-- Generated: 2026-03-20 | Updated: 2026-03-25 -->
 
 # src
 
 ## Purpose
-应用源代码目录，包含 Express 应用主文件、路由和视图模板。
+应用源代码目录，包含 Express 应用主文件、路由、视图模板、配置、任务和工具函数。
 
 ## Key Files
 
 | File | Description |
 |------|-------------|
 | `app.js` | Express 应用主文件，包含中间件配置和路由扫描 |
-| `routes/index.js` | 首页路由 |
-| `routes/api/users.js` | 用户相关 API 路由 |
-| `routes/api/test.ts` | TypeScript 示例路由 |
-| `views/error.hbs` | 错误页面模板 |
-| `views/index.hbs` | 首页模板 |
-| `views/layout.hbs` | 布局模板 |
+| `README.md` | src 目录结构说明 |
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
-| `routes/` | 路由文件 (JS/TS)，包含 `api/` 子目录 |
-| `views/` | Handlebars 模板文件 |
+| `config/` | 配置读取，集中管理 API 配置、环境变量等 |
+| `modules/` | 相对完整的业务模块单元，可被 task 引用 |
+| `task/` | 完整的任务封装，通常组合多个 modules |
+| `routes/` | 路由配置，支持 .js 和 .ts |
+| `utils/` | 通用工具函数 |
+| `views/` | Handlebars 页面模板 |
+
+## Directory Structure
+
+```
+src/
+├── app.js              # Express 应用入口
+├── config/             # 配置读取
+│   └── coze.config.ts # Coze 相关配置
+├── modules/            # 业务模块单元
+│   └── plugin.ts
+├── task/              # 完整任务
+│   └── meeting-analysis.ts
+├── routes/            # 路由配置
+│   └── api/           # API 路由（多层级嵌套）
+│       ├── coze.ts
+│       ├── test.ts
+│       └── users.js
+├── utils/             # 工具函数
+│   ├── history.js
+│   └── http-client.ts
+└── views/             # 页面模板
+    ├── layout.hbs
+    ├── index.hbs
+    ├── error.hbs
+    └── workflow-test.hbs
+```
 
 ## For AI Agents
 
@@ -37,6 +62,12 @@
 - TS 路由: 手动扫描，需 `export default`
 - 路径格式: `/saler-plugins/{route-name}`
 - API 路由目录: `src/routes/api/`
+- 页面路由: `src/routes/workflow-test.js`
+
+### 命名规范
+- **路由文件**：按功能命名，如 `coze.ts`、`users.js`
+- **API 路由**：放在 `routes/api/` 下，自动挂载到 `/api/` 路径
+- **页面路由**：放在 `routes/` 根目录，如 `workflow-test.js`
 
 ### 路径说明
 - `__dirname` 指向 `src/`
