@@ -78,6 +78,9 @@ function scanTsRoutes(dir, urlPrefix = '') {
 }
 scanTsRoutes(routesPath);
 
+// Manual route for workflow-test page
+const workflowTestRouter = require('./routes/workflow-test');
+app.use('/workflow-test', workflowTestRouter);
 
 
 // catch 404 and forward to error handler
