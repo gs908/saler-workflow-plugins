@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchResultBtn.textContent = '获取中...';
 
         try {
-            const workflowId = '';
+            const workflowId = '{{workflowId}}';
             const response = await fetch('/saler-plugins/api/coze/workflow-result/' + workflowId + '/' + executeId);
             const result = await response.json();
 

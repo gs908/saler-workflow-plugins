@@ -9,7 +9,8 @@ const { readHistory, writeHistory } = require('../utils/history');
 router.get('/', async (req, res) => {
     res.render('workflow-test', {
         title: '工作流执行测试',
-        subTitle: 'Coze 会议分析工作流测试工具'
+        subTitle: 'Coze 会议分析工作流测试工具',
+        workflowId: process.env.COZE_MEETING_WORKFLOW_ID || ''
     });
 });
 

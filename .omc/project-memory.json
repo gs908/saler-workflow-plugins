@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1773976659776,
+  "lastScanned": 1774426657984,
   "projectRoot": "D:\\workspaces\\agentic-workspace\\saler-workflow-plugins",
   "techStack": {
     "languages": [
@@ -11,6 +11,14 @@
         "markers": [
           "package.json"
         ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
       }
     ],
     "frameworks": [
@@ -20,22 +28,26 @@
         "category": "backend"
       }
     ],
-    "packageManager": "npm",
+    "packageManager": "pnpm",
     "runtime": null
   },
   "build": {
-    "buildCommand": null,
+    "buildCommand": "pnpm build",
     "testCommand": null,
     "lintCommand": null,
-    "devCommand": "npm run dev",
+    "devCommand": "pnpm dev",
     "scripts": {
       "start": "node ./bin/www",
-      "dev": "nodemon ./bin/www"
+      "start:tsx": "tsx ./bin/www",
+      "dev": "nodemon --exec \"node -r ts-node/register\" ./bin/www",
+      "dev:tsx": "tsx watch ./bin/www",
+      "build": "tsc",
+      "type-check": "tsc --noEmit"
     }
   },
   "conventions": {
-    "namingStyle": null,
-    "importStyle": "CommonJS",
+    "namingStyle": "camelCase",
+    "importStyle": null,
     "testPattern": null,
     "fileOrganization": null
   },
@@ -45,7 +57,8 @@
     "mainDirectories": [
       "bin",
       "public",
-      "src"
+      "src",
+      "test"
     ],
     "gitBranches": null
   },
@@ -54,127 +67,158 @@
     "bin": {
       "path": "bin",
       "purpose": "Executable scripts",
-      "fileCount": 1,
-      "lastAccessed": 1773976659735,
+      "fileCount": 2,
+      "lastAccessed": 1774426657870,
       "keyFiles": [
+        "AGENTS.md",
         "www"
       ]
     },
     "public": {
       "path": "public",
       "purpose": "Public files",
-      "fileCount": 0,
-      "lastAccessed": 1773976659736,
-      "keyFiles": []
+      "fileCount": 1,
+      "lastAccessed": 1774426657873,
+      "keyFiles": [
+        "AGENTS.md"
+      ]
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
-      "fileCount": 1,
-      "lastAccessed": 1773976659748,
+      "fileCount": 2,
+      "lastAccessed": 1774426657892,
       "keyFiles": [
+        "AGENTS.md",
         "app.js"
+      ]
+    },
+    "test": {
+      "path": "test",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1774426657893,
+      "keyFiles": [
+        "coze-api.http"
+      ]
+    },
+    "src\\config": {
+      "path": "src\\config",
+      "purpose": "Configuration files",
+      "fileCount": 1,
+      "lastAccessed": 1774426657895,
+      "keyFiles": [
+        "coze.config.ts"
       ]
     },
     "src\\routes": {
       "path": "src\\routes",
       "purpose": "Route handlers",
       "fileCount": 2,
-      "lastAccessed": 1773976659749,
+      "lastAccessed": 1774426657895,
       "keyFiles": [
-        "index.js",
-        "users.js"
+        "AGENTS.md",
+        "index.js"
+      ]
+    },
+    "src\\utils": {
+      "path": "src\\utils",
+      "purpose": "Utility functions",
+      "fileCount": 1,
+      "lastAccessed": 1774426657897,
+      "keyFiles": [
+        "http-client.ts"
       ]
     },
     "src\\views": {
       "path": "src\\views",
       "purpose": "View templates",
-      "fileCount": 3,
-      "lastAccessed": 1773976659750,
+      "fileCount": 4,
+      "lastAccessed": 1774426657897,
       "keyFiles": [
+        "AGENTS.md",
         "error.hbs",
-        "index.hbs",
-        "layout.hbs"
+        "index.hbs"
       ]
     }
   },
   "hotPaths": [
     {
       "path": "src\\app.js",
-      "accessCount": 8,
-      "lastAccessed": 1773977331984,
+      "accessCount": 4,
+      "lastAccessed": 1774427990061,
       "type": "file"
     },
     {
-      "path": "package.json",
-      "accessCount": 5,
-      "lastAccessed": 1773981094183,
+      "path": "src\\routes\\workflow-test.js",
+      "accessCount": 4,
+      "lastAccessed": 1774428841058,
       "type": "file"
     },
     {
-      "path": "src\\AGENTS.md",
-      "accessCount": 3,
-      "lastAccessed": 1773980617121,
+      "path": "src\\views\\workflow-test.hbs",
+      "accessCount": 4,
+      "lastAccessed": 1774428857293,
       "type": "file"
     },
     {
-      "path": "AGENTS.md",
-      "accessCount": 3,
-      "lastAccessed": 1773980618396,
-      "type": "file"
-    },
-    {
-      "path": "bin\\www",
+      "path": "docs\\superpowers\\plans\\2026-03-25-workflow-test-page.md",
       "accessCount": 2,
-      "lastAccessed": 1773977086086,
+      "lastAccessed": 1774427580482,
       "type": "file"
     },
     {
-      "path": "src\\routes\\AGENTS.md",
+      "path": "src\\utils\\history.js",
       "accessCount": 2,
-      "lastAccessed": 1773980617551,
+      "lastAccessed": 1774427788264,
       "type": "file"
     },
     {
-      "path": "tsconfig.json",
+      "path": "src\\routes\\api\\coze.ts",
       "accessCount": 1,
-      "lastAccessed": 1773977190071,
+      "lastAccessed": 1774427029741,
       "type": "file"
     },
     {
-      "path": "src\\routes\\test.ts",
+      "path": "src\\views\\index.hbs",
       "accessCount": 1,
-      "lastAccessed": 1773977239848,
+      "lastAccessed": 1774427038467,
       "type": "file"
     },
     {
-      "path": "bin\\AGENTS.md",
+      "path": "src\\task\\meeting-analysis.ts",
       "accessCount": 1,
-      "lastAccessed": 1773979813639,
+      "lastAccessed": 1774427038500,
       "type": "file"
     },
     {
-      "path": "src\\views\\AGENTS.md",
+      "path": "src\\views\\layout.hbs",
       "accessCount": 1,
-      "lastAccessed": 1773979814780,
+      "lastAccessed": 1774427038518,
       "type": "file"
     },
     {
-      "path": "public\\AGENTS.md",
+      "path": "docs\\superpowers\\specs\\2026-03-25-workflow-test-page-design.md",
       "accessCount": 1,
-      "lastAccessed": 1773979815160,
+      "lastAccessed": 1774427332980,
       "type": "file"
     },
     {
-      "path": ".env.example",
+      "path": "C:\\Users\\shen\\.claude\\plugins\\cache\\claude-plugins-official\\superpowers\\5.0.5\\skills\\subagent-driven-development\\implementer-prompt.md",
       "accessCount": 1,
-      "lastAccessed": 1773979951512,
+      "lastAccessed": 1774427609894,
       "type": "file"
     },
     {
-      "path": "src\\routes\\api\\AGENTS.md",
+      "path": "data\\runtime\\history.json",
       "accessCount": 1,
-      "lastAccessed": 1773980617975,
+      "lastAccessed": 1774428382194,
+      "type": "file"
+    },
+    {
+      "path": "src\\config\\coze.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774428813824,
       "type": "file"
     }
   ],

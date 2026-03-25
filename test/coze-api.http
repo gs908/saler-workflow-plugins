@@ -1,0 +1,34 @@
+### Coze API 测试
+
+### 1. 健康检查
+GET http://localhost:5699/saler-plugins/api/coze/health
+
+### 2. 执行会议分析工作流（异步触发）
+# Response 包含: code, msg, execute_id, debug_url, detail(logid)
+POST http://localhost:5699/saler-plugins/api/coze/meeting-analysis
+Content-Type: application/json
+
+{
+  "meetingName": "20260323测试会议",
+  "txtUrl": "https://p9-bot-workflow-sign.byteimg.com/tos-cn-i-mdko3gqilj/40e6c1770eae4a1a9d985484e8483b8e.txt~tplv-mdko3gqilj-image.image?rk3s=81d4c505&x-expires=1805522166&x-signature=LXzLwdb%2FzVpg1q4qkracGtiLav0%3D&x-wf-file_name=20260323%E8%B0%A2%E6%98%8E%E7%9A%93-%E5%8D%97%E6%96%B9%E7%94%B5%E7%BD%91%E8%B4%A2%E5%8A%A1%E4%B8%80%E8%A1%A8%E9%80%9A%E6%96%B0%E5%BB%BA.txt"
+}
+
+### 3. 执行会议分析工作流（等待完成）
+POST http://localhost:5699/saler-plugins/api/coze/meeting-analysis
+Content-Type: application/json
+
+{
+  "meetingName": "20260323测试会议",
+  "txtUrl": "https://example.com/meeting.txt",
+  "waitForCompletion": true
+}
+
+### 4. 查询工作流执行结果（通用接口）
+GET http://localhost:5699/saler-plugins/api/coze/workflow-result/7618205287124828170/7621086533214388260
+
+### 5. 查询会议分析结果（便捷接口）
+# 使用 .env 中配置的默认 workflowId
+GET http://localhost:5699/saler-plugins/api/coze/meeting-result/7621086533214388260
+
+### 6. 查询会议分析结果（指定 workflowId）
+GET http://localhost:5699/saler-plugins/api/coze/meeting-result/7621086533214388260?workflowId=7618205287124828170
