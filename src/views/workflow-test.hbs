@@ -413,8 +413,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
+            console.log('ready to export')
             // 解析 output 字段中的 JSON 字符串
-            const outputStr = currentAsyncData.output;
+            const outputStr = currentAsyncData[0] ? currentAsyncData[0].output : '';
+            if(!outputStr) {
+                alert('无输出结果可导出') 
+                return;
+            }
+
             let outputData;
             try {
                 outputData = JSON.parse(outputStr);
@@ -423,22 +429,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // 获取 Output.data 字段
-            const outputObj = outputData['0'] || outputData;
             let markdownContent = '';
             let filename = '会议分析报告';
 
-            if (outputObj.Output) {
+            if (outputData.Output) {
                 try {
-                    const innerOutput = typeof outputObj.Output === 'string'
-                        ? JSON.parse(outputObj.Output)
-                        : outputObj.Output;
-                    markdownContent = innerOutput.data || innerOutput.content || JSON.stringify(innerOutput, null, 2);
-                    filename = innerOutput.title || innerOutput.name || filename;
+                    const innerOutput = typeof outputData.Output === 'string'
+                        ? JSON.parse(outputData.Output)
+                        : outputData.Output;
+                    markdownContent = innerOutput.data || JSON.stringify(innerOutput, null, 2);
                 } catch (e) {
-                    markdownContent = outputObj.Output;
+                    markdownContent = outputData.Output;
                 }
             } else {
-                markdownContent = JSON.stringify(outputObj, null, 2);
+                markdownContent = JSON.stringify(outputData, null, 2);
             }
 
             // 如果 content 是 JSON 字符串，尝试解析
@@ -447,6 +451,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     const parsed = JSON.parse(markdownContent);
                     markdownContent = parsed.content || parsed.data || JSON.stringify(parsed, null, 2);
                 } catch (e) {}
+            }
+
+            // 从 markdown 正文第一行提取标题作为文件名
+            if (typeof markdownContent === 'string') {
+                const lines = markdownContent.trim().split('\n');
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed) {
+                        filename = trimmed.replace(/^#\s*/, '').trim();
+                        break;
+                    }
+                }
             }
 
             // 下载文件
