@@ -60,6 +60,7 @@
             <span id="timer">05:00</span>
         </div>
         <button id="fetchResultBtn" type="button" disabled>获取异步结果</button>
+        <button id="exportMdBtn" type="button" disabled>导出 markdown</button>
         <div class="result-item">
             <span class="label">异步输出:</span>
             <pre id="asyncResult">-</pre>
@@ -207,6 +208,7 @@ button:disabled {
 document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submitBtn');
     const fetchResultBtn = document.getElementById('fetchResultBtn');
+    const exportMdBtn = document.getElementById('exportMdBtn');
     const txtFileInput = document.getElementById('txtFile');
     const fileIdEl = document.getElementById('fileId');
     const meetingNameInput = document.getElementById('meetingName');
@@ -221,6 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentTimestamp = null;
     let timerInterval = null;
     let remainingSeconds = 300; // 5分钟
+    let currentAsyncData = null; // 存储异步结果数据
     let uploadedFileId = null;
     let uploadedFileName = null;
 
@@ -378,6 +381,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 asyncResultEl.textContent = JSON.stringify(result.data, null, 2);
                 statusEl.textContent = result.data.status || '完成';
+                currentAsyncData = result.data;
+                exportMdBtn.disabled = false;
 
                 if (currentTimestamp) {
                     await fetch('/saler-plugins/workflow-test/async-result', {
@@ -397,6 +402,65 @@ document.addEventListener('DOMContentLoaded', function() {
         } finally {
             fetchResultBtn.disabled = false;
             fetchResultBtn.textContent = '获取异步结果';
+        }
+    });
+
+    // 导出 markdown
+    exportMdBtn.addEventListener('click', function() {
+        if (!currentAsyncData) {
+            alert('无异步结果可导出');
+            return;
+        }
+
+        try {
+            // 解析 output 字段中的 JSON 字符串
+            const outputStr = currentAsyncData.output;
+            let outputData;
+            try {
+                outputData = JSON.parse(outputStr);
+            } catch (e) {
+                outputData = { Output: outputStr };
+            }
+
+            // 获取 Output.data 字段
+            const outputObj = outputData['0'] || outputData;
+            let markdownContent = '';
+            let filename = '会议分析报告';
+
+            if (outputObj.Output) {
+                try {
+                    const innerOutput = typeof outputObj.Output === 'string'
+                        ? JSON.parse(outputObj.Output)
+                        : outputObj.Output;
+                    markdownContent = innerOutput.data || innerOutput.content || JSON.stringify(innerOutput, null, 2);
+                    filename = innerOutput.title || innerOutput.name || filename;
+                } catch (e) {
+                    markdownContent = outputObj.Output;
+                }
+            } else {
+                markdownContent = JSON.stringify(outputObj, null, 2);
+            }
+
+            // 如果 content 是 JSON 字符串，尝试解析
+            if (typeof markdownContent === 'string' && markdownContent.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(markdownContent);
+                    markdownContent = parsed.content || parsed.data || JSON.stringify(parsed, null, 2);
+                } catch (e) {}
+            }
+
+            // 下载文件
+            const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename.endsWith('.md') ? filename : filename + '.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            alert('导出失败: ' + error.message);
         }
     });
 });
