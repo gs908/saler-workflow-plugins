@@ -16,6 +16,17 @@
             <input type="text" id="meetingName" name="meetingName" placeholder="输入会议名称" />
         </div>
         <button id="submitBtn" type="button">提交执行</button>
+
+        <div class="form-group">
+            <label >示例:</label>
+            <pre>
+[02:49-02:50] 【某总（客户方领导）】
+开始稍稍等一下。啊
+
+[02:50-02:51] 【张三（售前顾问）】
+嗯嗯
+            </pre>
+        </div>
     </div>
 
     <!-- 执行结果区域 -->
@@ -60,61 +71,126 @@
 
 <style>
 .workflow-test-container {
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #333;
+}
+
+h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #1a1a1a;
+}
+
+h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1a1a1a;
 }
 
 .form-section, .result-section, .timer-section {
-    margin-bottom: 30px;
+    margin-bottom: 24px;
     padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    background: #fff;
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 14px;
 }
 
 .form-group label {
     display: inline-block;
-    width: 100px;
+    width: 120px;
+    font-weight: 500;
+    color: #555;
+    vertical-align: middle;
 }
 
-.form-group input {
-    width: 300px;
-    padding: 5px;
+.form-group input[type="text"] {
+    width: 360px;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.form-group input[type="text"]:focus {
+    outline: none;
+    border-color: #1890ff;
+}
+
+.form-group input[type="file"] {
+    font-size: 13px;
+}
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "SF Mono", Consolas, monospace;
+    resize: vertical;
 }
 
 button {
-    padding: 8px 16px;
+    padding: 8px 20px;
+    font-size: 14px;
     cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background: #1890ff;
+    color: #fff;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background: #40a9ff;
 }
 
 button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+    background: #d9d9d9;
 }
 
 .result-item {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .result-item .label {
-    font-weight: bold;
+    font-weight: 600;
     margin-right: 10px;
+    color: #555;
+    min-width: 80px;
+    display: inline-block;
 }
 
 #output, #asyncResult {
-    background: #f5f5f5;
-    padding: 10px;
-    max-height: 200px;
+    background: #f8f8f8;
+    padding: 12px;
+    border-radius: 4px;
+    max-height: 250px;
     overflow-y: auto;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    border: 1px solid #eee;
 }
 
 .timer-display {
-    font-size: 24px;
-    margin-bottom: 15px;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1890ff;
+    font-family: "SF Mono", Consolas, monospace;
 }
 </style>
 
