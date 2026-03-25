@@ -8,8 +8,8 @@
             <input type="file" id="txtFile" name="txtFile" accept=".txt" />
         </div>
         <div class="form-group">
-            <label>上传后文件 ID:</label>
-            <span id="fileId">-</span>
+            <label for="fileId">文件 ID:</label>
+            <input type="text" id="fileId" name="fileId" placeholder="上传后自动填写，或手动输入" />
         </div>
         <div class="form-group">
             <label for="meetingName">会议名称:</label>
@@ -144,21 +144,39 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
             if (result.success) {
                 uploadedFileId = result.data.id;
-                fileIdEl.textContent = uploadedFileId + ' (' + result.data.file_name + ')';
+                fileIdEl.value = uploadedFileId;
+
+                // 上传成功后立即保存到 history.json
+                const meetingName = meetingNameInput.value.trim();
+                const saveResponse = await fetch('/saler-plugins/workflow-test/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileId: uploadedFileId,
+                        fileName: result.data.file_name,
+                        meetingName: meetingName || null,
+                        uploadResponse: result.data
+                    })
+                });
+                const saveResult = await saveResponse.json();
+                if (saveResult.success) {
+                    currentTimestamp = new Date().toISOString();
+                }
             } else {
-                fileIdEl.textContent = '上传失败: ' + (result.error || '未知错误');
+                fileIdEl.value = '上传失败: ' + (result.error || '未知错误');
             }
         } catch (error) {
-            fileIdEl.textContent = '上传失败: ' + error.message;
+            fileIdEl.value = '上传失败: ' + error.message;
         }
     });
 
     // 提交执行
     submitBtn.addEventListener('click', async function() {
+        const fileId = fileIdEl.value.trim();
         const meetingName = meetingNameInput.value.trim();
 
-        if (!uploadedFileId) {
-            alert('请先上传 TXT 文件');
+        if (!fileId) {
+            alert('请上传文件或输入文件 ID');
             return;
         }
         if (!meetingName) {
@@ -173,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/saler-plugins/api/coze/meeting-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fileId: uploadedFileId, meetingName, waitForCompletion: false })
+                body: JSON.stringify({ fileId, meetingName, waitForCompletion: false })
             });
 
             const result = await response.json();
@@ -191,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        txtUrl: uploadedFileId,
+                        fileId,
                         meetingName,
                         executeResponse: data
                     })

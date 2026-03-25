@@ -17,25 +17,33 @@ router.get('/', async (req, res) => {
 /**
  * POST /workflow-test/save
  * 保存提交参数到 history.json
+ * 支持增量更新：通过 timestamp 匹配已有记录
  */
 router.post('/save', async (req, res) => {
     try {
-        const { meetingName, txtUrl, fileId, executeResponse } = req.body;
+        const { timestamp, meetingName, fileId, fileName, executeResponse, uploadResponse } = req.body;
         const history = readHistory();
 
+        // 使用前端传来的 timestamp 或生成新的
+        const key = timestamp || new Date().toISOString();
+        const existing = history[key] || {};
+
         const record = {
-            timestamp: new Date().toISOString(),
-            input: { txtUrl, fileId, meetingName },
-            executeResponse,
-            asyncResult: null
+            timestamp: key,
+            input: {
+                fileId: fileId || existing.input?.fileId,
+                fileName: fileName || existing.input?.fileName,
+                meetingName: meetingName || existing.input?.meetingName
+            },
+            uploadResponse: uploadResponse || existing.uploadResponse,
+            executeResponse: executeResponse || existing.executeResponse,
+            asyncResult: existing.asyncResult || null
         };
 
-        // 使用时间戳作为 key 便于区分多条记录
-        const key = new Date().toISOString();
         history[key] = record;
         writeHistory(history);
 
-        res.json({ success: true });
+        res.json({ success: true, timestamp: key });
     } catch (error) {
         console.error('[WorkflowTest] 保存失败:', error);
         res.status(500).json({ success: false, error: error.message });
