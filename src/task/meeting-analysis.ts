@@ -9,6 +9,7 @@ export interface WorkflowExecuteParams {
   meetingName: string;
   txtUrl?: string;
   fileId?: string;
+  fileName?: string;
 }
 
 /**
@@ -94,21 +95,24 @@ export class CozeServiceClient {
   async executeMeetingAnalysisWorkflow(
     params: WorkflowExecuteParams
   ): Promise<WorkflowExecuteResponse> {
-    const { meetingName, txtUrl, fileId } = params;
+    const { meetingName, txtUrl, fileId, fileName } = params;
 
     console.log(`[CozeService] 开始执行会议分析工作流: ${meetingName}`);
 
     try {
-      // 支持两种格式：file_id 或 url
+      // 支持两种格式：file_id + file_name 或 url
       const parameters: Record<string, unknown> = { meetingName };
       if (fileId) {
-        parameters.file = { file_id: fileId };
+        parameters.recordFile = fileName
+          ? { file_id: fileId, file_name: fileName }
+          : { file_id: fileId };
       } else if (txtUrl) {
         parameters.url = txtUrl;
       }
-
+      console.log('Check params:',JSON.stringify(parameters, null, 2))
       const response = await this.apiClient.workflows.runs.create({
         workflow_id: cozeConfig.workflows.meetingAnalysis.workflowId,
+        is_async: cozeConfig.workflows.meetingAnalysis.isAsync,
         parameters,
       });
 
@@ -277,9 +281,10 @@ export const cozeService = new CozeServiceClient();
 export async function executeMeetingAnalysis(
   meetingName: string,
   txtUrl?: string,
-  fileId?: string
+  fileId?: string,
+  fileName?: string
 ): Promise<WorkflowExecuteResponse> {
-  return cozeService.executeMeetingAnalysisWorkflow({ meetingName, txtUrl, fileId });
+  return cozeService.executeMeetingAnalysisWorkflow({ meetingName, txtUrl, fileId, fileName });
 }
 
 /**
@@ -311,6 +316,7 @@ export async function getWorkflowResult(
  * @param meetingName - 会议名称
  * @param txtUrl - 文本文件 URL（fileId 存在时此参数忽略）
  * @param fileId - 上传后的文件 ID
+ * @param fileName - 上传后的文件名
  * @param options - 轮询配置选项
  * @returns 最终执行结果
  */
@@ -318,12 +324,13 @@ export async function executeMeetingAnalysisAndWait(
   meetingName: string,
   txtUrl?: string,
   fileId?: string,
+  fileName?: string,
   options?: {
     maxAttempts?: number;
     interval?: number;
   }
 ): Promise<WorkflowRunHistory> {
-  const executeResult = await executeMeetingAnalysis(meetingName, txtUrl, fileId);
+  const executeResult = await executeMeetingAnalysis(meetingName, txtUrl, fileId, fileName);
   const workflowId = cozeConfig.workflows.meetingAnalysis.workflowId;
   return cozeService.waitForWorkflowCompletion(
     workflowId,

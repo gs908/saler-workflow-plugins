@@ -1,5 +1,5 @@
 <div class="workflow-test-container">
-    <h1>工作流执行测试</h1>
+    <h1>售前分析报告生成工作流执行测试</h1>
 
     <!-- 表单区域 -->
     <div class="form-section">
@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let timerInterval = null;
     let remainingSeconds = 300; // 5分钟
     let uploadedFileId = null;
+    let uploadedFileName = null;
 
     // 文件上传
     txtFileInput.addEventListener('change', async function() {
@@ -144,6 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
             if (result.success) {
                 uploadedFileId = result.data.id;
+                uploadedFileName = result.data.file_name;
                 fileIdEl.value = uploadedFileId;
 
                 // 上传成功后立即保存到 history.json
@@ -153,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         fileId: uploadedFileId,
-                        fileName: result.data.file_name,
+                        fileName: uploadedFileName,
                         meetingName: meetingName || null,
                         uploadResponse: result.data
                     })
@@ -191,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/saler-plugins/api/coze/meeting-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fileId, meetingName, waitForCompletion: false })
+                body: JSON.stringify({ fileId, fileName: uploadedFileName, meetingName, waitForCompletion: false })
             });
 
             const result = await response.json();
