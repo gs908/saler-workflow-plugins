@@ -1,0 +1,248 @@
+<div class="workflow-test-container">
+    <h1>工作流执行测试</h1>
+
+    <!-- 表单区域 -->
+    <div class="form-section">
+        <div class="form-group">
+            <label for="txtUrl">TXT 文件链接:</label>
+            <input type="text" id="txtUrl" name="txtUrl" placeholder="https://example.com/test.txt" />
+        </div>
+        <div class="form-group">
+            <label for="meetingName">会议名称:</label>
+            <input type="text" id="meetingName" name="meetingName" placeholder="输入会议名称" />
+        </div>
+        <button id="submitBtn" type="button">提交执行</button>
+    </div>
+
+    <!-- 执行结果区域 -->
+    <div class="result-section">
+        <h2>执行结果</h2>
+        <div class="result-item">
+            <span class="label">状态:</span>
+            <span id="status">-</span>
+        </div>
+        <div class="result-item">
+            <span class="label">execute_id:</span>
+            <span id="executeId">-</span>
+        </div>
+        <div class="result-item">
+            <span class="label">debug_url:</span>
+            <a id="debugUrl" href="#" target="_blank">-</a>
+        </div>
+        <div class="result-item">
+            <span class="label">输出:</span>
+            <pre id="output">-</pre>
+        </div>
+    </div>
+
+    <!-- 倒计时区域 -->
+    <div class="timer-section">
+        <h2>异步结果获取</h2>
+        <div class="timer-display">
+            <span class="label">剩余时间:</span>
+            <span id="timer">05:00</span>
+        </div>
+        <button id="fetchResultBtn" type="button" disabled>获取异步结果</button>
+    </div>
+</div>
+
+<style>
+.workflow-test-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-section, .result-section, .timer-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: inline-block;
+    width: 100px;
+}
+
+.form-group input {
+    width: 300px;
+    padding: 5px;
+}
+
+button {
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.result-item {
+    margin-bottom: 10px;
+}
+
+.result-item .label {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+#output {
+    background: #f5f5f5;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.timer-display {
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const submitBtn = document.getElementById('submitBtn');
+    const fetchResultBtn = document.getElementById('fetchResultBtn');
+    const txtUrlInput = document.getElementById('txtUrl');
+    const meetingNameInput = document.getElementById('meetingName');
+    const statusEl = document.getElementById('status');
+    const executeIdEl = document.getElementById('executeId');
+    const debugUrlEl = document.getElementById('debugUrl');
+    const outputEl = document.getElementById('output');
+    const timerEl = document.getElementById('timer');
+
+    let currentTimestamp = null;
+    let timerInterval = null;
+    let remainingSeconds = 300; // 5分钟
+
+    // 提交执行
+    submitBtn.addEventListener('click', async function() {
+        const txtUrl = txtUrlInput.value.trim();
+        const meetingName = meetingNameInput.value.trim();
+
+        if (!txtUrl || !meetingName) {
+            alert('请填写所有字段');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = '执行中...';
+
+        try {
+            const response = await fetch('/saler-plugins/api/coze/meeting-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ txtUrl, meetingName, waitForCompletion: false })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                const data = result.data;
+                statusEl.textContent = '已提交';
+                executeIdEl.textContent = data.execute_id || '-';
+                debugUrlEl.textContent = data.debug_url || '-';
+                debugUrlEl.href = data.debug_url || '#';
+                outputEl.textContent = JSON.stringify(data, null, 2);
+
+                // 保存到 history.json
+                const saveResponse = await fetch('/saler-plugins/workflow-test/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        txtUrl,
+                        meetingName,
+                        executeResponse: data
+                    })
+                });
+
+                const saveResult = await saveResponse.json();
+                if (saveResult.success) {
+                    currentTimestamp = new Date().toISOString();
+                    startTimer();
+                }
+            } else {
+                statusEl.textContent = '失败: ' + (result.error || '未知错误');
+            }
+        } catch (error) {
+            statusEl.textContent = '请求失败: ' + error.message;
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '提交执行';
+        }
+    });
+
+    // 启动倒计时
+    function startTimer() {
+        remainingSeconds = 300;
+        fetchResultBtn.disabled = true;
+        updateTimerDisplay();
+
+        timerInterval = setInterval(function() {
+            remainingSeconds--;
+            updateTimerDisplay();
+
+            if (remainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                fetchResultBtn.disabled = false;
+                timerEl.textContent = '00:00';
+            }
+        }, 1000);
+    }
+
+    // 更新计时器显示
+    function updateTimerDisplay() {
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        timerEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+    }
+
+    // 获取异步结果
+    fetchResultBtn.addEventListener('click', async function() {
+        const executeId = executeIdEl.textContent;
+        if (!executeId || executeId === '-') {
+            alert('无可用的 execute_id');
+            return;
+        }
+
+        fetchResultBtn.disabled = true;
+        fetchResultBtn.textContent = '获取中...';
+
+        try {
+            const workflowId = '';
+            const response = await fetch('/saler-plugins/api/coze/workflow-result/' + workflowId + '/' + executeId);
+            const result = await response.json();
+
+            if (result.success) {
+                outputEl.textContent = JSON.stringify(result.data, null, 2);
+                statusEl.textContent = result.data.status || '完成';
+
+                if (currentTimestamp) {
+                    await fetch('/saler-plugins/workflow-test/async-result', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            timestamp: currentTimestamp,
+                            asyncResult: result.data
+                        })
+                    });
+                }
+            } else {
+                outputEl.textContent = '获取失败: ' + (result.error || '未知错误');
+            }
+        } catch (error) {
+            outputEl.textContent = '请求失败: ' + error.message;
+        } finally {
+            fetchResultBtn.disabled = false;
+            fetchResultBtn.textContent = '获取异步结果';
+        }
+    });
+});
+</script>
