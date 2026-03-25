@@ -72,3 +72,6 @@ dist/
 # pnpm
 pnpm-debug.log*
 .pnpm-store/
+
+data/runtime/*
+.omc/*
