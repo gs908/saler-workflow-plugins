@@ -144,9 +144,21 @@
   },
   "hotPaths": [
     {
+      "path": "src\\views\\workflow-test.hbs",
+      "accessCount": 9,
+      "lastAccessed": 1774430516401,
+      "type": "file"
+    },
+    {
       "path": "src\\app.js",
-      "accessCount": 4,
-      "lastAccessed": 1774427990061,
+      "accessCount": 8,
+      "lastAccessed": 1774429939872,
+      "type": "file"
+    },
+    {
+      "path": "src\\routes\\api\\coze.ts",
+      "accessCount": 6,
+      "lastAccessed": 1774430436185,
       "type": "file"
     },
     {
@@ -156,9 +168,9 @@
       "type": "file"
     },
     {
-      "path": "src\\views\\workflow-test.hbs",
+      "path": "src\\task\\meeting-analysis.ts",
       "accessCount": 4,
-      "lastAccessed": 1774428857293,
+      "lastAccessed": 1774430404189,
       "type": "file"
     },
     {
@@ -174,21 +186,15 @@
       "type": "file"
     },
     {
-      "path": "src\\routes\\api\\coze.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774427029741,
+      "path": "src\\config\\coze.config.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774430365352,
       "type": "file"
     },
     {
       "path": "src\\views\\index.hbs",
       "accessCount": 1,
       "lastAccessed": 1774427038467,
-      "type": "file"
-    },
-    {
-      "path": "src\\task\\meeting-analysis.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774427038500,
       "type": "file"
     },
     {
@@ -216,9 +222,15 @@
       "type": "file"
     },
     {
-      "path": "src\\config\\coze.config.ts",
+      "path": "bin\\www",
       "accessCount": 1,
-      "lastAccessed": 1774428813824,
+      "lastAccessed": 1774430028224,
+      "type": "file"
+    },
+    {
+      "path": "src\\utils\\http-client.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774430365383,
       "type": "file"
     }
   ],

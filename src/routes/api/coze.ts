@@ -3,6 +3,7 @@ import {
   executeMeetingAnalysis,
   getWorkflowResult,
   executeMeetingAnalysisAndWait,
+  uploadFileToCoze,
   WorkflowExecuteResponse,
   WorkflowRunHistory,
 } from '../../task/meeting-analysis';
@@ -172,6 +173,54 @@ router.get('/meeting-result/:executeId', async (req: Request, res: Response) => 
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : '查询执行结果失败',
+    });
+  }
+});
+
+/**
+ * 上传文件到 Coze
+ * POST /api/coze/file-upload
+ *
+ * Request Body (multipart/form-data):
+ *   file: 二进制文件
+ *
+ * Response:
+ *   {
+ *     "success": true,
+ *     "data": { "id": "xxx", "file_name": "xxx.txt", "bytes": 123, "created_at": 123456 }
+ *   }
+ */
+router.post('/file-upload', async (req: Request, res: Response) => {
+  try {
+    const multer = require('multer');
+    const upload = multer({ dest: 'data/uploads/' });
+
+    // 使用 multer 处理上传
+    upload.single('file')(req, res, async (err: any) => {
+      if (err) {
+        return res.status(500).json({ success: false, error: '文件上传失败: ' + err.message });
+      }
+
+      const file = (req as any).file;
+      if (!file) {
+        return res.status(400).json({ success: false, error: '未上传文件' });
+      }
+
+      console.log(`[API] 上传文件: ${file.originalname}, 大小: ${file.size}`);
+
+      try {
+        const result = await uploadFileToCoze(file.path);
+        return res.json({ success: true, data: result });
+      } finally {
+        // 清理临时文件
+        require('fs').unlinkSync(file.path);
+      }
+    });
+  } catch (error) {
+    console.error('[API] 文件上传失败:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : '上传失败',
     });
   }
 });

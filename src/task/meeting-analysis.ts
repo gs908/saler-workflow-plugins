@@ -166,6 +166,59 @@ export class CozeServiceClient {
   }
 
   /**
+   * 上传文件到 Coze
+   * @param filePath - 文件路径
+   * @returns 上传后的文件信息 { id, file_name, bytes, created_at }
+   */
+  async uploadFile(filePath: string): Promise<{
+    id: string;
+    file_name: string;
+    bytes: number;
+    created_at: number;
+  }> {
+    console.log(`[CozeService] 上传文件: ${filePath}`);
+
+    const FormData = require('form-data');
+    const fs = require('fs');
+    const form = new FormData();
+    form.append('file', fs.createReadStream(filePath));
+
+    return new Promise((resolve, reject) => {
+      const url = `${cozeConfig.baseURL}/v1/files/upload`;
+      const request = require('https').request(
+        {
+          method: 'POST',
+          headers: {
+            ...form.getHeaders(),
+            Authorization: `Bearer ${cozeConfig.token}`,
+          },
+          hostname: new URL(cozeConfig.baseURL).hostname,
+          path: '/v1/files/upload',
+        },
+        (res: any) => {
+          let data = '';
+          res.on('data', (chunk: string) => (data += chunk));
+          res.on('end', () => {
+            try {
+              const response = JSON.parse(data);
+              if (response.code !== 0) {
+                reject(new Error(response.msg || '文件上传失败'));
+                return;
+              }
+              console.log(`[CozeService] 文件上传成功: ${response.data.id}`);
+              resolve(response.data);
+            } catch (e) {
+              reject(new Error('解析上传响应失败'));
+            }
+          });
+        }
+      );
+      request.on('error', reject);
+      form.pipe(request);
+    });
+  }
+
+  /**
    * 轮询等待工作流执行完成
    * @param workflowId - 工作流 ID
    * @param executeId - 执行 ID
@@ -219,6 +272,17 @@ export async function executeMeetingAnalysis(
   txtUrl: string
 ): Promise<WorkflowExecuteResponse> {
   return cozeService.executeMeetingAnalysisWorkflow({ meetingName, txtUrl });
+}
+
+/**
+ * 便捷函数：上传文件到 Coze
+ * @param filePath - 文件路径
+ * @returns 上传后的文件信息
+ */
+export async function uploadFileToCoze(
+  filePath: string
+): Promise<{ id: string; file_name: string; bytes: number; created_at: number }> {
+  return cozeService.uploadFile(filePath);
 }
 
 /**

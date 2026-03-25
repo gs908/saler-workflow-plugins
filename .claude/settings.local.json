@@ -6,7 +6,12 @@
       "mcp__plugin_context7_context7__resolve-library-id",
       "Bash(pnpm add:*)",
       "Bash(pnpm type-check:*)",
-      "Bash(timeout 3 pnpm start:tsx:*)"
+      "Bash(timeout 3 pnpm start:tsx:*)",
+      "Bash(node -e \"require\\(''''./src/app.js''''\\)\")",
+      "Bash(node src/app.js)",
+      "Bash(grep -A5 '\"\"dev\"\"' package.json)",
+      "Bash(node -r ts-node/register ./bin/www)",
+      "Bash(netstat -ano)"
     ]
   }
 }

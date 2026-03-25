@@ -4,8 +4,12 @@
     <!-- 表单区域 -->
     <div class="form-section">
         <div class="form-group">
-            <label for="txtUrl">TXT 文件链接:</label>
-            <input type="text" id="txtUrl" name="txtUrl" placeholder="https://example.com/test.txt" />
+            <label for="txtFile">上传 TXT 文件:</label>
+            <input type="file" id="txtFile" name="txtFile" accept=".txt" />
+        </div>
+        <div class="form-group">
+            <label>上传后文件 ID:</label>
+            <span id="fileId">-</span>
         </div>
         <div class="form-group">
             <label for="meetingName">会议名称:</label>
@@ -110,7 +114,8 @@ button:disabled {
 document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submitBtn');
     const fetchResultBtn = document.getElementById('fetchResultBtn');
-    const txtUrlInput = document.getElementById('txtUrl');
+    const txtFileInput = document.getElementById('txtFile');
+    const fileIdEl = document.getElementById('fileId');
     const meetingNameInput = document.getElementById('meetingName');
     const statusEl = document.getElementById('status');
     const executeIdEl = document.getElementById('executeId');
@@ -121,14 +126,43 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentTimestamp = null;
     let timerInterval = null;
     let remainingSeconds = 300; // 5分钟
+    let uploadedFileId = null;
+
+    // 文件上传
+    txtFileInput.addEventListener('change', async function() {
+        const file = txtFileInput.files ? txtFileInput.files[0] : null;
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/saler-plugins/api/coze/file-upload', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                uploadedFileId = result.data.id;
+                fileIdEl.textContent = uploadedFileId + ' (' + result.data.file_name + ')';
+            } else {
+                fileIdEl.textContent = '上传失败: ' + (result.error || '未知错误');
+            }
+        } catch (error) {
+            fileIdEl.textContent = '上传失败: ' + error.message;
+        }
+    });
 
     // 提交执行
     submitBtn.addEventListener('click', async function() {
-        const txtUrl = txtUrlInput.value.trim();
         const meetingName = meetingNameInput.value.trim();
 
-        if (!txtUrl || !meetingName) {
-            alert('请填写所有字段');
+        if (!uploadedFileId) {
+            alert('请先上传 TXT 文件');
+            return;
+        }
+        if (!meetingName) {
+            alert('请输入会议名称');
             return;
         }
 
@@ -139,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/saler-plugins/api/coze/meeting-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ txtUrl, meetingName, waitForCompletion: false })
+                body: JSON.stringify({ txtUrl: uploadedFileId, meetingName, waitForCompletion: false })
             });
 
             const result = await response.json();
@@ -157,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        txtUrl,
+                        txtUrl: uploadedFileId,
                         meetingName,
                         executeResponse: data
                     })
