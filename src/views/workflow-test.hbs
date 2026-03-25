@@ -47,6 +47,10 @@
             <span id="timer">05:00</span>
         </div>
         <button id="fetchResultBtn" type="button" disabled>获取异步结果</button>
+        <div class="form-group">
+            <label for="asyncResult">异步返回:</label>
+            <textarea id="asyncResult" rows="6" placeholder="获取后显示结果" readonly></textarea>
+        </div>
     </div>
 </div>
 
@@ -121,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const executeIdEl = document.getElementById('executeId');
     const debugUrlEl = document.getElementById('debugUrl');
     const outputEl = document.getElementById('output');
+    const asyncResultEl = document.getElementById('asyncResult');
     const timerEl = document.getElementById('timer');
 
     let currentTimestamp = null;
@@ -247,6 +252,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 clearInterval(timerInterval);
                 fetchResultBtn.disabled = false;
                 timerEl.textContent = '00:00';
+                // 倒计时结束，触发通知
+                if (Notification.permission === 'granted') {
+                    new Notification('工作流测试', { body: '倒计时结束，可以获取异步结果了' });
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission();
+                }
             }
         }, 1000);
     }
@@ -275,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
 
             if (result.success) {
-                outputEl.textContent = JSON.stringify(result.data, null, 2);
+                asyncResultEl.textContent = JSON.stringify(result.data, null, 2);
                 statusEl.textContent = result.data.status || '完成';
 
                 if (currentTimestamp) {
