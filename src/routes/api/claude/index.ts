@@ -12,46 +12,35 @@ const router = Router();
 
 const SKILLS_DIR = path.join(os.homedir(), '.claude', 'skills');
 
-// ---- GET /skills — 读取本机已安装的 skill 列表 ----
+// ---- GET /skills 动态读取已安装的 skill 列表 ----
 router.get('/skills', (_req: Request, res: Response) => {
   try {
     const entries = fs.readdirSync(SKILLS_DIR, { withFileTypes: true });
     const skills = entries
       .filter(e => e.isDirectory())
-      .map(e => {
-        const skillMdPath = path.join(SKILLS_DIR, e.name, 'SKILL.md');
-        let description = '';
-        try {
-          // 取 SKILL.md 的 description frontmatter 字段作为说明
-          const raw = fs.readFileSync(skillMdPath, 'utf-8');
-          const match = raw.match(/^description:\s*["']?(.+?)["']?\s*$/m);
-          if (match) description = match[1].trim();
-        } catch { /* 没有 SKILL.md 就留空 */ }
-        return { value: e.name, label: e.name };
-      });
+      .map(e => ({ value: e.name, label: e.name }));
     res.json({ skills });
   } catch {
     res.json({ skills: [] });
   }
 });
 
-// ---- 公共参数校验 ----
-
-function validateCreateParams(body: any, uploadedFiles?: Express.Multer.File[]): { error: string } | null {
+// ---- 参数校验（前端 POST /，workDir 仍必填）----
+function validateCreateParams(body: any): { error: string } | null {
   if (!body.name || typeof body.name !== 'string') return { error: '缺少必填参数: name（任务名称）' };
-  if (!body.prompt || typeof body.prompt !== 'string') return { error: '缺少必填参数: prompt' };
   if (!body.workDir || typeof body.workDir !== 'string') return { error: '缺少必填参数: workDir' };
-  try {
-    fs.mkdirSync(body.workDir, { recursive: true });
-  } catch (e: any) {
-    return { error: `工作目录无法创建: ${body.workDir}（${e.message}）` };
-  }
-  // 文件二选一必传：上传文件 或 服务器文件路径
-  const hasUpload = uploadedFiles && uploadedFiles.length > 0;
-  const hasFilePaths = Array.isArray(body.filePaths) ? body.filePaths.length > 0 : !!body.filePaths;
-  if (!hasUpload && !hasFilePaths) return { error: '缺少文件：请上传文件（files）或提供服务器文件路径（filePaths）' };
+  if (!body.pipelineId || typeof body.pipelineId !== 'string') return { error: '缺少必填参数: pipelineId / executeId（任务编号）' };
   return null;
-}function setSseHeaders(res: Response, taskId: string): void {
+}
+
+// ---- 参数校验（外部 POST /async，workDir 可走默认值）----
+function validateAsyncParams(body: any): { error: string } | null {
+  if (!body.name || typeof body.name !== 'string') return { error: '缺少必填参数: name（任务名称）' };
+  if (!body.pipelineId || typeof body.pipelineId !== 'string') return { error: '缺少必填参数: executeId（任务编号）' };
+  return null;
+}
+
+function setSseHeaders(res: Response, taskId: string): void {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -61,21 +50,17 @@ function validateCreateParams(body: any, uploadedFiles?: Express.Multer.File[]):
 }
 
 /**
- * POST / - 启动任务并立即以 SSE 流式响应（原有行为不变，前端页面使用）
- *
- * Multipart body:
- *   prompt   string   (必填)
- *   workDir  string   (必填)
- *   skill?   string
- *   filePaths? string[]
- *   model?   string
- *   files?   上传文件
+ * POST / - 前端新建任务，SSE 实时流式返回执行过程
  */
 router.post('/', upload.array('files', 10), (req: Request, res: Response) => {
-  const validErr = validateCreateParams(req.body || {}, req.files as Express.Multer.File[]);
+  const validErr = validateCreateParams(req.body || {});
   if (validErr) { res.status(400).json(validErr); return; }
 
   const { prompt, workDir, skill, filePaths, model } = req.body;
+  const pipelineId = req.body.pipelineId as string;
+  const actualWorkDir = path.join(workDir, pipelineId);
+  fs.mkdirSync(actualWorkDir, { recursive: true });
+
   const uploadedFiles = getUploadedFilePaths(req.files as Express.Multer.File[]);
   const allFiles = [
     ...uploadedFiles,
@@ -83,13 +68,11 @@ router.post('/', upload.array('files', 10), (req: Request, res: Response) => {
   ];
 
   const task = taskManager.create({
-    name: req.body.name, prompt, skill, workDir, model,
+    name: req.body.name, prompt, skill, workDir: actualWorkDir, model, pipelineId,
     uploadedFiles: allFiles.length > 0 ? allFiles : undefined,
   });
 
   setSseHeaders(res, task.id);
-
-  // 订阅广播，然后执行任务
   subscribe(task.id, res);
 
   executeTask(task).catch((err) => {
@@ -98,49 +81,74 @@ router.post('/', upload.array('files', 10), (req: Request, res: Response) => {
 });
 
 /**
- * POST /async - 异步提交任务，立即返回元信息（外部系统使用）
+ * POST /async - 外部系统异步调用，立即返回任务元信息，后台执行并回调
  *
- * JSON body:
- *   prompt      string   (必填)
- *   workDir     string   (必填)
- *   skill?      string
- *   model?      string
- *   pipelineId? string   外部流水线 ID
- *   callbackUrl? string  任务完成后回调地址，POST workDir/result.json 内容
+ * 字段映射：外部传 execute_id，内部使用 pipelineId
+ * 环境变量默认值：
+ *   CLAUDE_DEFAULT_WORK_DIR     - 默认工作目录（workDir 不传时使用）
+ *   CLAUDE_DEFAULT_PROMPT       - 默认提示词（prompt 不传时使用）
+ *   CLAUDE_DEFAULT_SKILL        - 默认 skill（skill 不传时使用）
+ *   CLAUDE_DEFAULT_CALLBACK_URL - 默认回调地址（callbackUrl 不传时使用）
  */
 router.post('/async', (req: Request, res: Response) => {
-  const validErr = validateCreateParams(req.body || {}, []);
+  // execute_id 是外部接口字段，映射为内部 pipelineId
+  const body = { ...req.body };
+  if (body.execute_id && !body.pipelineId) {
+    body.pipelineId = body.execute_id;
+  }
+
+  const validErr = validateAsyncParams(body);
   if (validErr) { res.status(400).json(validErr); return; }
 
-  const { name, prompt, workDir, skill, model, pipelineId, callbackUrl, filePaths } = req.body;
+  const { name, prompt, workDir, skill, model, pipelineId, callbackUrl, filePaths } = body;
+
+  // 未传时使用环境变量中的默认值
+  const resolvedWorkDir     = (workDir     || process.env.CLAUDE_DEFAULT_WORK_DIR     || '').trim();
+  const resolvedPrompt      = (prompt      || process.env.CLAUDE_DEFAULT_PROMPT       || '').trim();
+  const resolvedSkill       = (skill       || process.env.CLAUDE_DEFAULT_SKILL        || undefined);
+  const resolvedCallbackUrl = (callbackUrl || process.env.CLAUDE_DEFAULT_CALLBACK_URL || undefined);
+
+  if (!resolvedWorkDir) {
+    res.status(400).json({ error: '缺少必填参数: workDir（且未配置 CLAUDE_DEFAULT_WORK_DIR）' });
+    return;
+  }
+  if (!resolvedPrompt) {
+    res.status(400).json({ error: '缺少必填参数: prompt（且未配置 CLAUDE_DEFAULT_PROMPT）' });
+    return;
+  }
+
+  const actualWorkDir = path.join(resolvedWorkDir, pipelineId);
+  fs.mkdirSync(actualWorkDir, { recursive: true });
+
   const allFiles = Array.isArray(filePaths) ? filePaths : filePaths ? [filePaths] : [];
 
   const task = taskManager.create({
-    name, prompt, skill, workDir, model, pipelineId, callbackUrl,
+    name,
+    prompt:        resolvedPrompt,
+    skill:         resolvedSkill,
+    workDir:       actualWorkDir,
+    model,
+    pipelineId,
+    callbackUrl:   resolvedCallbackUrl,
     uploadedFiles: allFiles.length > 0 ? allFiles : undefined,
   });
 
-  // 立即响应，连接断开
   res.json({
-    taskId: task.id,
-    pipelineId: task.pipelineId ?? null,
-    sessionId: task.sessionId ?? null,   // 任务刚建立时为 null，完成后可通过 status 接口获取
-    status: task.status,
-    startTime: task.startTime,
-    streamUrl: `/saler-plugins/api/claude/${task.id}/stream`,
+    taskId:     task.id,
+    execute_id:  task.pipelineId ?? null,
+    sessionId:  task.sessionId ?? null,
+    status:     task.status,
+    startTime:  task.startTime,
+    streamUrl:  `/saler-plugins/api/claude/${task.id}/stream`,
   });
 
-  // 异步执行，不等待
   executeTask(task).catch((err) => {
     console.error(`[Claude Task ${task.id}] Unexpected error:`, err);
   });
 });
 
 /**
- * GET /:taskId/stream - 订阅任意任务的 SSE 流（支持历史回放）
- *
- * - 若任务仍在运行：先回放历史事件，再实时推送新事件
- * - 若任务已完成：回放历史后推 done 并关闭
+ * GET /:taskId/stream - 前端/外部订阅 SSE 实时推送（支持历史回放）
  */
 router.get('/:taskId/stream', (req: Request, res: Response) => {
   const taskId = req.params.taskId as string;
@@ -153,7 +161,6 @@ router.get('/:taskId/stream', (req: Request, res: Response) => {
 
   setSseHeaders(res, taskId);
 
-  // 回放历史：先推合并后的文本，再推关键事件
   if (row.resultText) {
     const textPayload = JSON.stringify({ type: 'text', content: row.resultText });
     res.write(`event: text\ndata: ${textPayload}\n\n`);
@@ -164,7 +171,6 @@ router.get('/:taskId/stream', (req: Request, res: Response) => {
     res.write(`event: ${evt.eventType}\ndata: ${evt.data}\n\n`);
   }
 
-  // 任务已结束，直接关闭
   if (row.status === 'completed' || row.status === 'cancelled' || row.status === 'error') {
     const donePayload = JSON.stringify({ taskId, status: row.status, endTime: row.endTime });
     res.write(`event: done\ndata: ${donePayload}\n\n`);
@@ -172,13 +178,11 @@ router.get('/:taskId/stream', (req: Request, res: Response) => {
     return;
   }
 
-  // 任务仍在运行，订阅后续广播
   subscribe(taskId, res);
 });
 
 /**
- * DELETE /:taskId - 删除任务（含 DB 记录、events、内存缓存、SSE 订阅）
- * 运行中的任务会先被取消再删除
+ * DELETE /:taskId - 删除任务
  */
 router.delete('/:taskId', (req: Request, res: Response) => {
   const taskId = req.params.taskId as string;
@@ -189,10 +193,7 @@ router.delete('/:taskId', (req: Request, res: Response) => {
     return;
   }
 
-  // 断开所有 SSE 订阅者
   unsubscribeAll(taskId);
-
-  // 删除任务（含取消运行中任务 + 清 DB + 清内存 abortController）
   taskManager.delete(taskId);
 
   res.json({ success: true, taskId, deletedStatus: task.status });
@@ -212,7 +213,7 @@ router.post('/:taskId/cancel', (req: Request, res: Response) => {
       return;
     }
     res.status(400).json({
-      error: `无法取消状态为 "${task.status}" 的任务`,
+      error: `任务当前状态 "${task.status}" 无法取消`,
       taskId,
       status: task.status,
     });
@@ -223,7 +224,7 @@ router.post('/:taskId/cancel', (req: Request, res: Response) => {
 });
 
 /**
- * POST /:taskId/resume - 续接已中断/报错任务（使用 Claude Code SDK resume）
+ * POST /:taskId/resume - 续接已取消/报错的任务（需有 sessionId）
  */
 router.post('/:taskId/resume', async (req: Request, res: Response) => {
   const taskId = req.params.taskId as string;
@@ -234,7 +235,7 @@ router.post('/:taskId/resume', async (req: Request, res: Response) => {
     return;
   }
   if (!task.sessionId) {
-    res.status(400).json({ error: '该任务没有保存 sessionId，无法续接（任务可能从未成功运行过或版本较旧）', taskId });
+    res.status(400).json({ error: '该任务没有 sessionId，无法续接', taskId });
     return;
   }
   if (task.status === 'running' || task.status === 'pending') {
@@ -251,7 +252,7 @@ router.post('/:taskId/resume', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /:taskId/retry - 用相同参数重新创建任务（无 sessionId 时使用）
+ * POST /:taskId/retry - 用原始参数重新创建并执行（无 sessionId 时使用）
  */
 router.post('/:taskId/retry', (req: Request, res: Response) => {
   const taskId = req.params.taskId as string;
@@ -281,7 +282,9 @@ router.post('/:taskId/retry', (req: Request, res: Response) => {
   res.json({ success: true, newTaskId: task.id, status: task.status, streamUrl: `/saler-plugins/api/claude/${task.id}/stream` });
 });
 
-
+/**
+ * GET /:taskId/status - 查询任务状态
+ */
 router.get('/:taskId/status', (req: Request, res: Response) => {
   const taskId = req.params.taskId as string;
   const summary = taskManager.getSummary(taskId);
@@ -295,7 +298,7 @@ router.get('/:taskId/status', (req: Request, res: Response) => {
 });
 
 /**
- * GET / - 列出所有任务
+ * GET / - 任务列表
  */
 router.get('/', (_req: Request, res: Response) => {
   const tasks = taskManager.list();

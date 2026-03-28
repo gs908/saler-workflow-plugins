@@ -143,10 +143,13 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
 
   try {
     const raw = fs.readFileSync(resultPath, 'utf-8');
+    const parsed = JSON.parse(raw);
     resultData = {
-      ...JSON.parse(raw),
+      ...parsed,
+      type:       parsed.status === 'success' ? 'video_create' : '',
+      path:       parsed.output_file,
       taskId:     task.id,
-      pipelineId: task.pipelineId ?? null,
+      execute_id:  task.pipelineId ?? null,
       sessionId:  task.sessionId ?? null,
     };
   } catch {
