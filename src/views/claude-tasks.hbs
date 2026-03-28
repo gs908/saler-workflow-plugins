@@ -99,11 +99,16 @@
       </div>
       <div class="ct-form-group">
         <label class="ct-label">任务描述（提示词） <span class="ct-required">*</span></label>
-        <textarea class="ct-input ct-textarea" id="inputPrompt" placeholder="描述你要 Claude 做什么..." rows="4" required></textarea>
+        <textarea class="ct-input ct-textarea" id="inputPrompt" placeholder="描述你要 Claude 做什么..." rows="4" required>根据报告内容，生成视频，使用默认主题</textarea>
       </div>
       <div class="ct-form-group">
-        <label class="ct-label">工作目录 <span class="ct-required">*</span></label>
-        <input class="ct-input" type="text" id="inputWorkDir" placeholder="例如: C:/Users/xxx/projects/my-project" required />
+        <label class="ct-label">工作目录（基础路径） <span class="ct-required">*</span></label>
+        <input class="ct-input" type="text" id="inputWorkDir" placeholder="例如: C:/Users/xxx/projects" required />
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">任务编号（pipelineId） <span class="ct-required">*</span></label>
+        <input class="ct-input" type="text" id="inputPipelineId" placeholder="如: HuaDian-001" required />
+        <span class="ct-hint">实际工作区 = 工作目录 / 任务编号</span>
       </div>
       <div class="ct-form-group">
         <label class="ct-label">Skill</label>

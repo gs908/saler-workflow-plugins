@@ -117,11 +117,12 @@ function handleCreateTask(e) {
   var name = document.getElementById('inputName').value.trim();
   var prompt = document.getElementById('inputPrompt').value.trim();
   var workDir = document.getElementById('inputWorkDir').value.trim();
+  var pipelineId = document.getElementById('inputPipelineId').value.trim();
   var skill = document.getElementById('inputSkill').value;
   var filesInput = document.getElementById('inputFiles');
 
-  if (!name || !prompt || !workDir) {
-    showToast('请填写任务名称、任务描述和工作目录', 'error');
+  if (!name || !prompt || !workDir || !pipelineId) {
+    showToast('请填写任务名称、任务描述、工作目录和任务编号', 'error');
     return;
   }
 
@@ -134,6 +135,7 @@ function handleCreateTask(e) {
   formData.append('name', name);
   formData.append('prompt', prompt);
   formData.append('workDir', workDir);
+  if (pipelineId) formData.append('pipelineId', pipelineId);
   if (skill) formData.append('skill', skill);
 
   if (filesInput.files.length > 0) {
