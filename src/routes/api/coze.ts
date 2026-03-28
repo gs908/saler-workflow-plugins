@@ -6,7 +6,7 @@ import {
   uploadFileToCoze,
   WorkflowExecuteResponse,
   WorkflowRunHistory,
-} from '../../services/meeting-report/meeting-analysis';
+} from '../../services/meeting-report';
 
 const router = Router();
 
