@@ -73,10 +73,6 @@ dist/
 # pnpm
 pnpm-debug.log*
 .pnpm-store/
-<<<<<<< HEAD
 
 data/runtime/*
 .omc/*
-=======
-.pnpm-lock.yaml
->>>>>>> 8d52704918f21004e5b15bbad8d0779ffe260575

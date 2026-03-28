@@ -1,6 +1,6 @@
 import { CozeAPI } from '@coze/api';
-import { cozeConfig, validateCozeConfig } from '../config/coze.config';
-import { HttpClient } from '../utils/http-client';
+import { cozeConfig, validateCozeConfig } from '../../config/coze.config';
+import { HttpClient } from '../../utils/http-client';
 
 /**
  * 工作流执行参数

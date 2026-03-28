@@ -227,6 +227,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let uploadedFileId = null;
     let uploadedFileName = null;
 
+    // 手动输入 execute_id 时立即启用获取按钮
+    manualExecuteIdEl.addEventListener('input', function() {
+        if (manualExecuteIdEl.value.trim()) {
+            fetchResultBtn.disabled = false;
+        }
+    });
+
     // 文件上传
     txtFileInput.addEventListener('change', async function() {
         const file = txtFileInput.files ? txtFileInput.files[0] : null;
@@ -343,6 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (remainingSeconds <= 0) {
                 clearInterval(timerInterval);
+                // 倒计时结束，自动填入 execute_id 并启用按钮
+                if (executeIdEl.textContent && executeIdEl.textContent !== '-') {
+                    manualExecuteIdEl.value = executeIdEl.textContent;
+                }
                 fetchResultBtn.disabled = false;
                 timerEl.textContent = '00:00';
                 // 倒计时结束，触发通知
