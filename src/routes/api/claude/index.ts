@@ -83,7 +83,7 @@ router.post('/', upload.array('files', 10), (req: Request, res: Response) => {
 /**
  * POST /async - 外部系统异步调用，立即返回任务元信息，后台执行并回调
  *
- * 字段映射：外部传 executeId，内部使用 pipelineId
+ * 字段映射：外部传 execute_id，内部使用 pipelineId
  * 环境变量默认值：
  *   CLAUDE_DEFAULT_WORK_DIR     - 默认工作目录（workDir 不传时使用）
  *   CLAUDE_DEFAULT_PROMPT       - 默认提示词（prompt 不传时使用）
@@ -91,10 +91,10 @@ router.post('/', upload.array('files', 10), (req: Request, res: Response) => {
  *   CLAUDE_DEFAULT_CALLBACK_URL - 默认回调地址（callbackUrl 不传时使用）
  */
 router.post('/async', (req: Request, res: Response) => {
-  // executeId 是外部接口字段，映射为内部 pipelineId
+  // execute_id 是外部接口字段，映射为内部 pipelineId
   const body = { ...req.body };
-  if (body.executeId && !body.pipelineId) {
-    body.pipelineId = body.executeId;
+  if (body.execute_id && !body.pipelineId) {
+    body.pipelineId = body.execute_id;
   }
 
   const validErr = validateAsyncParams(body);
@@ -135,7 +135,7 @@ router.post('/async', (req: Request, res: Response) => {
 
   res.json({
     taskId:     task.id,
-    executeId:  task.pipelineId ?? null,
+    execute_id:  task.pipelineId ?? null,
     sessionId:  task.sessionId ?? null,
     status:     task.status,
     startTime:  task.startTime,
