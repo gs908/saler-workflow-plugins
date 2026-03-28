@@ -66,6 +66,9 @@
           </div>
           <div class="ct-info-actions" id="infoActions">
             <button class="ct-btn ct-btn-danger" id="btnCancelTask" style="display:none;">取消任务</button>
+            <button class="ct-btn ct-btn-primary" id="btnResumeTask" style="display:none;">续接执行</button>
+            <button class="ct-btn ct-btn-warning" id="btnRetryTask" style="display:none;">重新执行</button>
+            <button class="ct-btn ct-btn-ghost" id="btnDeleteTask">删除任务</button>
           </div>
         </div>
 
@@ -91,7 +94,11 @@
     </div>
     <form id="newTaskForm">
       <div class="ct-form-group">
-        <label class="ct-label">任务描述 <span class="ct-required">*</span></label>
+        <label class="ct-label">任务名称 <span class="ct-required">*</span></label>
+        <input class="ct-input" type="text" id="inputName" placeholder="简短描述这个任务，如：港云数科售前报告" required />
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">任务描述（提示词） <span class="ct-required">*</span></label>
         <textarea class="ct-input ct-textarea" id="inputPrompt" placeholder="描述你要 Claude 做什么..." rows="4" required></textarea>
       </div>
       <div class="ct-form-group">

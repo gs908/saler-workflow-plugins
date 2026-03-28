@@ -332,6 +332,8 @@
 .ct-btn-primary:hover:not(:disabled) { background: #1d4ed8; }
 .ct-btn-danger { background: #dc2626; color: #fff; }
 .ct-btn-danger:hover:not(:disabled) { background: #b91c1c; }
+.ct-btn-warning { background: #d97706; color: #fff; }
+.ct-btn-warning:hover:not(:disabled) { background: #b45309; }
 .ct-btn-ghost {
   background: transparent;
   color: #475569;

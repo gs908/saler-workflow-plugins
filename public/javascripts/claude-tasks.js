@@ -4,16 +4,8 @@
 
 const API_BASE = '/saler-plugins/api/claude';
 
-// Skill 手动配置列表（按需修改）
-const SKILLS = [
-  { value: '', label: '-- 不指定 Skill --' },
-  { value: 'video-report-generator', label: 'video-report-generator - 根据报告生成视频' },
-  { value: 'deep-interview', label: 'Deep Interview - 深度需求采访' },
-  { value: 'doc-coauthoring', label: 'Doc Coauthoring - 文档协作' },
-  { value: 'planning-with-files', label: 'Planning - 文件规划' },
-  { value: 'frontend-design', label: 'Frontend Design - 前端设计' },
-  { value: 'webapp-testing', label: 'WebApp Testing - 应用测试' },
-];
+// Skill 列表（动态从服务器加载）
+let SKILLS = [{ value: '', label: '-- 不指定 Skill --' }];
 
 // 默认工作目录（按需修改）
 const DEFAULT_WORK_DIR = 'C:/Users/18601/Desktop/workflow';
@@ -24,25 +16,39 @@ const state = {
   currentTaskId: null,
   taskOutputs: {},     // taskId -> { text: '', events: [] }
   activeReaders: {},   // taskId -> ReadableStream reader
+  emptyStateEl: null,  // 缓存 emptyState 元素，防止被 innerHTML='' 销毁
 };
 
 // ---- 初始化 ----
 document.addEventListener('DOMContentLoaded', function () {
+  state.emptyStateEl = document.getElementById('emptyState');
   initDropdowns();
   bindEvents();
   loadTasks(true);
 });
 
 function initDropdowns() {
-  var skillSelect = document.getElementById('inputSkill');
-  SKILLS.forEach(function (s) {
-    var opt = document.createElement('option');
-    opt.value = s.value;
-    opt.textContent = s.label;
-    skillSelect.appendChild(opt);
-  });
-
   document.getElementById('inputWorkDir').value = DEFAULT_WORK_DIR;
+
+  // 动态加载服务器 ~/.claude/skills 目录下的 skill 列表
+  fetch(API_BASE + '/skills')
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      var skillSelect = document.getElementById('inputSkill');
+      skillSelect.innerHTML = '';
+      SKILLS = [{ value: '', label: '-- 不指定 Skill --' }].concat(data.skills || []);
+      SKILLS.forEach(function (s) {
+        var opt = document.createElement('option');
+        opt.value = s.value;
+        opt.textContent = s.label;
+        skillSelect.appendChild(opt);
+      });
+      // 默认选中 video-report-generator
+      skillSelect.value = 'video-report-generator';
+    })
+    .catch(function () {
+      // 加载失败时保留默认空选项，不影响其他功能
+    });
 }
 
 function bindEvents() {
@@ -51,6 +57,11 @@ function bindEvents() {
   document.getElementById('btnCloseModal').addEventListener('click', hideModal);
   document.getElementById('btnCancelModal').addEventListener('click', hideModal);
   document.getElementById('btnCancelTask').addEventListener('click', handleCancelTask);
+  document.getElementById('btnDeleteTask').addEventListener('click', handleDeleteTask);
+  var resumeBtn = document.getElementById('btnResumeTask');
+  if (resumeBtn) resumeBtn.addEventListener('click', handleResumeTask);
+  var retryBtn = document.getElementById('btnRetryTask');
+  if (retryBtn) retryBtn.addEventListener('click', handleRetryTask);
   document.getElementById('btnClearOutput').addEventListener('click', clearOutput);
   document.getElementById('newTaskForm').addEventListener('submit', handleCreateTask);
 
@@ -81,6 +92,14 @@ function _doLoadTasks() {
     })
     .then(function (data) {
       state.tasks = data.tasks || [];
+
+      // 清理前端已不存在于后端的 taskOutputs，避免内存无限增长
+      var liveIds = {};
+      state.tasks.forEach(function (t) { liveIds[t.id] = true; });
+      Object.keys(state.taskOutputs).forEach(function (id) {
+        if (!liveIds[id]) delete state.taskOutputs[id];
+      });
+
       renderTaskList();
       document.getElementById('taskCount').textContent = state.tasks.length;
       if (state.currentTaskId) {
@@ -95,17 +114,24 @@ function _doLoadTasks() {
 function handleCreateTask(e) {
   e.preventDefault();
 
+  var name = document.getElementById('inputName').value.trim();
   var prompt = document.getElementById('inputPrompt').value.trim();
   var workDir = document.getElementById('inputWorkDir').value.trim();
   var skill = document.getElementById('inputSkill').value;
   var filesInput = document.getElementById('inputFiles');
 
-  if (!prompt || !workDir) {
-    showToast('请填写任务描述和工作目录', 'error');
+  if (!name || !prompt || !workDir) {
+    showToast('请填写任务名称、任务描述和工作目录', 'error');
     return;
   }
 
+  // 防重复提交
+  var submitBtn = document.querySelector('#newTaskForm button[type="submit"]');
+  if (submitBtn && submitBtn.disabled) return;
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '提交中…'; }
+
   var formData = new FormData();
+  formData.append('name', name);
   formData.append('prompt', prompt);
   formData.append('workDir', workDir);
   if (skill) formData.append('skill', skill);
@@ -118,6 +144,7 @@ function handleCreateTask(e) {
 
   hideModal();
   document.getElementById('newTaskForm').reset();
+  if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '提交'; }
 
   fetch(API_BASE + '/', { method: 'POST', body: formData })
     .then(function (response) {
@@ -134,6 +161,7 @@ function handleCreateTask(e) {
       }
 
       startSSEReader(taskId, response);
+      showTaskDetail(taskId);
       showToast('任务已创建', 'success');
 
       loadTasks();
@@ -165,6 +193,99 @@ function handleCancelTask() {
     });
 }
 
+function handleDeleteTask() {
+  var taskId = state.currentTaskId;
+  if (!taskId) return;
+
+  var task = state.tasks.find(function (t) { return t.id === taskId; });
+  var isRunning = task && (task.status === 'running' || task.status === 'pending');
+  var confirmMsg = isRunning
+    ? '任务正在执行中，删除将强制取消并清除所有记录，确定吗？'
+    : '确定要删除这个任务吗？此操作不可撤销。';
+
+  if (!confirm(confirmMsg)) return;
+
+  fetch(API_BASE + '/' + taskId, { method: 'DELETE' })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.success) {
+        // 清理前端缓存
+        delete state.taskOutputs[taskId];
+        if (state.activeReaders[taskId]) {
+          try { state.activeReaders[taskId].cancel(); } catch (e) { /* ignore */ }
+          delete state.activeReaders[taskId];
+        }
+        state.currentTaskId = null;
+
+        // 隐藏右侧详情面板
+        document.getElementById('detailContent').style.display = 'none';
+        document.getElementById('detailPlaceholder').style.display = 'flex';
+
+        showToast('任务已删除', 'info');
+        loadTasks(true);
+      } else {
+        showToast(data.error || '删除失败', 'error');
+      }
+    })
+    .catch(function (err) {
+      showToast('删除任务失败: ' + err.message, 'error');
+    });
+}
+
+// ---- 续接任务 ----
+function handleResumeTask() {
+  var taskId = state.currentTaskId;
+  if (!taskId) return;
+
+  if (!confirm('将从任务中断处续接执行，确定吗？')) return;
+
+  fetch(API_BASE + '/' + taskId + '/resume', { method: 'POST' })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.success) {
+        showToast('任务续接中…', 'info');
+        // 清理旧的 SSE 连接，重新订阅
+        if (state.activeReaders[taskId]) {
+          try { state.activeReaders[taskId].cancel(); } catch (e) { /* ignore */ }
+          delete state.activeReaders[taskId];
+        }
+        loadTasks();
+        subscribeToStream(taskId);
+      } else {
+        showToast(data.error || '续接失败', 'error');
+      }
+    })
+    .catch(function (err) {
+      showToast('续接任务失败: ' + err.message, 'error');
+    });
+}
+
+function handleRetryTask() {
+  var taskId = state.currentTaskId;
+  if (!taskId) return;
+
+  if (!confirm('将用相同参数重新创建并执行任务，确定吗？')) return;
+
+  fetch(API_BASE + '/' + taskId + '/retry', { method: 'POST' })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.success) {
+        showToast('已创建新任务，执行中…', 'info');
+        loadTasks();
+        // 切换到新任务
+        if (data.newTaskId) {
+          state.currentTaskId = data.newTaskId;
+          subscribeToStream(data.newTaskId);
+        }
+      } else {
+        showToast(data.error || '重新执行失败', 'error');
+      }
+    })
+    .catch(function (err) {
+      showToast('重新执行失败: ' + err.message, 'error');
+    });
+}
+
 // ---- SSE 流式读取 ----
 function startSSEReader(taskId, response) {
   var reader = response.body.getReader();
@@ -176,8 +297,6 @@ function startSSEReader(taskId, response) {
   if (!state.taskOutputs[taskId]) {
     state.taskOutputs[taskId] = { text: '', events: [] };
   }
-
-  showTaskDetail(taskId);
 
   function flushBuffer(tid, buf) {
     var blocks = buf.split('\n\n');
@@ -361,16 +480,23 @@ function scrollOutputToBottom() {
 // ---- UI 渲染 ----
 function renderTaskList() {
   var container = document.getElementById('taskList');
-  var empty = document.getElementById('emptyState');
+  var empty = state.emptyStateEl;
+
+  // 清空前先把 emptyState 从 container 里取出来，防止被 innerHTML='' 销毁
+  if (empty && empty.parentNode === container) {
+    container.removeChild(empty);
+  }
 
   if (state.tasks.length === 0) {
     container.innerHTML = '';
-    container.appendChild(empty);
-    empty.style.display = 'block';
+    if (empty) {
+      container.appendChild(empty);
+      empty.style.display = 'block';
+    }
     return;
   }
 
-  empty.style.display = 'none';
+  if (empty) empty.style.display = 'none';
   container.innerHTML = '';
 
   state.tasks.forEach(function (task) {
@@ -385,7 +511,7 @@ function renderTaskList() {
       '<div class="ct-task-card-header">' +
         createStatusBadge(task.status) +
       '</div>' +
-      '<div class="ct-task-card-prompt">' + escapeHtml(promptPreview) + '</div>' +
+      '<div class="ct-task-card-prompt">' + escapeHtml(task.name || promptPreview) + '</div>' +
       '<div class="ct-task-card-meta">' +
         '<span>' + timeStr + '</span>' +
         (task.skill ? '<span class="ct-task-card-skill">' + escapeHtml(task.skill) + '</span>' : '') +
@@ -407,7 +533,7 @@ function showTaskDetail(taskId) {
 
   refreshTaskDetail(taskId);
 
-  // 渲染已有的输出
+  // 渲染已有的内存输出
   var outputContent = document.getElementById('outputContent');
   outputContent.innerHTML = '';
 
@@ -427,7 +553,28 @@ function showTaskDetail(taskId) {
     renderOutput(taskId);
   }
 
+  // 如果没有活跃的 SSE 连接（外部任务或页面刷新后的旧任务），主动订阅 /stream
+  if (!state.activeReaders[taskId]) {
+    subscribeToStream(taskId);
+  }
+
   renderTaskList();
+}
+
+// 主动订阅任意任务的 SSE 流（支持历史回放）
+function subscribeToStream(taskId) {
+  if (state.activeReaders[taskId]) return; // 已有连接，跳过
+
+  if (!state.taskOutputs[taskId]) {
+    state.taskOutputs[taskId] = { text: '', events: [] };
+  }
+
+  fetch(API_BASE + '/' + taskId + '/stream')
+    .then(function (response) {
+      if (!response.ok) return; // 任务不存在等情况，静默处理
+      startSSEReader(taskId, response);
+    })
+    .catch(function () {});
 }
 
 function refreshTaskDetail(taskId) {
@@ -454,6 +601,19 @@ function fillTaskInfo(task) {
 
   var cancelBtn = document.getElementById('btnCancelTask');
   cancelBtn.style.display = (task.status === 'running' || task.status === 'pending') ? 'inline-flex' : 'none';
+
+  // 续接按钮：已取消或报错，且有 sessionId 时显示
+  var resumeBtn = document.getElementById('btnResumeTask');
+  if (resumeBtn) {
+    var canResume = (task.status === 'cancelled' || task.status === 'error') && !!task.sessionId;
+    resumeBtn.style.display = canResume ? 'inline-flex' : 'none';
+  }
+  // 重新执行按钮：已取消或报错，且没有 sessionId 时显示
+  var retryBtn = document.getElementById('btnRetryTask');
+  if (retryBtn) {
+    var canRetry = (task.status === 'cancelled' || task.status === 'error') && !task.sessionId;
+    retryBtn.style.display = canRetry ? 'inline-flex' : 'none';
+  }
 }
 
 function createStatusBadge(status) {
