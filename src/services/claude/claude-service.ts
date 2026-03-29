@@ -146,8 +146,9 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
     const parsed = JSON.parse(raw);
     resultData = {
       ...parsed,
-      type:       parsed.status === 'success' ? 'video_create' : '',
+      type:       'video_create',
       path:       parsed.output_file,
+      outcome:    parsed.status === 'success' ? 'success' : 'fail',
       taskId:     task.id,
       execute_id:  task.pipelineId ?? null,
       sessionId:  task.sessionId ?? null,

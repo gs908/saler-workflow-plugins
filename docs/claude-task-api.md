@@ -163,6 +163,7 @@ data: {"taskId":"...","status":"completed","endTime":1774504063263}
   "execute_id":  "pipe-001",           // 创建任务时传入的 pipelineId
   "path": "video.mp4",
   "type":       "video_create",       // result.json status=success 时为 video_create，否则为空字符串
+  "outcome": "success"
   // 系统自动附加
   "taskId":     "8cdba7df-...",       // 本次任务 ID
   "sessionId":  "ec78a10e-..."        // 用于续接的会话 ID
