@@ -25,7 +25,7 @@ router.get('/skills', (_req: Request, res: Response) => {
   }
 });
 
-// ---- 参数校验（前端 POST /，workDir 仍必填）----
+// ---- 参数校验（前端 POST /，workDir 必填）----
 function validateCreateParams(body: any): { error: string } | null {
   if (!body.name || typeof body.name !== 'string') return { error: '缺少必填参数: name（任务名称）' };
   if (!body.workDir || typeof body.workDir !== 'string') return { error: '缺少必填参数: workDir' };
@@ -36,8 +36,15 @@ function validateCreateParams(body: any): { error: string } | null {
 // ---- 参数校验（外部 POST /async，workDir 可走默认值）----
 function validateAsyncParams(body: any): { error: string } | null {
   if (!body.name || typeof body.name !== 'string') return { error: '缺少必填参数: name（任务名称）' };
-  if (!body.pipelineId || typeof body.pipelineId !== 'string') return { error: '缺少必填参数: executeId（任务编号）' };
+  if (!body.pipelineId || typeof body.pipelineId !== 'string') return { error: '缺少必填参数: execute_id（任务编号）' };
   return null;
+}
+
+/** 生成 yyyyMMddHHmmss 格式时间戳，用于工作目录后缀 */
+function makeTimestamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
 function setSseHeaders(res: Response, taskId: string): void {
@@ -58,7 +65,7 @@ router.post('/', upload.array('files', 10), (req: Request, res: Response) => {
 
   const { prompt, workDir, skill, filePaths, model } = req.body;
   const pipelineId = req.body.pipelineId as string;
-  const actualWorkDir = path.join(workDir, pipelineId);
+  const actualWorkDir = path.join(workDir, `${pipelineId}_${makeTimestamp()}`);
   fs.mkdirSync(actualWorkDir, { recursive: true });
 
   const uploadedFiles = getUploadedFilePaths(req.files as Express.Multer.File[]);
@@ -117,7 +124,7 @@ router.post('/async', (req: Request, res: Response) => {
     return;
   }
 
-  const actualWorkDir = path.join(resolvedWorkDir, pipelineId);
+  const actualWorkDir = path.join(resolvedWorkDir, `${pipelineId}_${makeTimestamp()}`);
   fs.mkdirSync(actualWorkDir, { recursive: true });
 
   const allFiles = Array.isArray(filePaths) ? filePaths : filePaths ? [filePaths] : [];
@@ -135,7 +142,7 @@ router.post('/async', (req: Request, res: Response) => {
 
   res.json({
     taskId:     task.id,
-    execute_id:  task.pipelineId ?? null,
+    execute_id: task.pipelineId ?? null,
     sessionId:  task.sessionId ?? null,
     status:     task.status,
     startTime:  task.startTime,

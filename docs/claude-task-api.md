@@ -25,7 +25,7 @@
 ```json
 {
   "name":        "任务名称",            // 必填，例：港云数科售前报告
-  "executeId":   "pipe-001",            // 必填，外部流水线 ID（内部映射为 pipelineId）
+  "execute_id":   "pipe-001",            // 必填，外部流水线 ID（内部映射为 pipelineId）
   "filePaths":   "C:/work/report.md",  // 必填，服务器上已有文件的绝对路径
 
   "workDir":     "C:/work/project",    // 选填，不传使用 CLAUDE_DEFAULT_WORK_DIR（实际工作区 = workDir/executeId）
@@ -160,9 +160,10 @@ data: {"taskId":"...","status":"completed","endTime":1774504063263}
 {
   // skill 生成的 result.json 业务数据（字段由 skill 决定）
   "status":"success",
-  "executeId":  "pipe-001",           // 创建任务时传入的 pipelineId
+  "execute_id":  "pipe-001",           // 创建任务时传入的 pipelineId
   "path": "video.mp4",
   "type":       "video_create",       // result.json status=success 时为 video_create，否则为空字符串
+  "outcome": "success"
   // 系统自动附加
   "taskId":     "8cdba7df-...",       // 本次任务 ID
   "sessionId":  "ec78a10e-..."        // 用于续接的会话 ID
