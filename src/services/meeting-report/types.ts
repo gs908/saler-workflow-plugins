@@ -81,6 +81,8 @@ export interface PollingOptions {
   interval?: number;
   /** 取消信号，用于中断轮询 */
   signal?: AbortSignal;
+  /** 首次轮询延迟（毫秒），默认 0 */
+  initialDelay?: number;
 }
 
 /**

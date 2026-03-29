@@ -47,6 +47,17 @@ export { CozeBaseClient, createConfigFromGlobal } from './coze-client';
 export { WorkflowService } from './workflow-service';
 export { FileService } from './file-service';
 export { PollingService } from './polling-service';
+export { CallbackService } from './callback-service';
+export { MeetingProcessor } from './meeting-processor';
+
+// 回调服务类型
+export type { CallbackConfig } from './callback-service';
+
+// 会议处理器类型
+export type {
+  MeetingProcessorConfig,
+  MeetingProcessResult,
+} from './meeting-processor';
 
 // ============ 便捷函数（向后兼容）============
 

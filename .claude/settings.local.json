@@ -11,7 +11,8 @@
       "Bash(node src/app.js)",
       "Bash(grep -A5 '\"\"dev\"\"' package.json)",
       "Bash(node -r ts-node/register ./bin/www)",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

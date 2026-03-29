@@ -52,11 +52,17 @@ export class PollingService extends WorkflowService {
     executeId: string,
     options: PollingOptions = {}
   ): Promise<WorkflowRunHistory> {
-    const { maxAttempts = 30, interval = 2000, signal } = options;
+    const { maxAttempts = 30, interval = 2000, signal, initialDelay = 0 } = options;
 
     this.logger.info(
-      `[PollingService] 开始轮询工作流执行状态: maxAttempts=${maxAttempts}, executeId=${executeId}`
+      `[PollingService] 开始轮询工作流执行状态: maxAttempts=${maxAttempts}, executeId=${executeId}, initialDelay=${initialDelay}ms`
     );
+
+    // 首次延迟（如果配置了）
+    if (initialDelay > 0) {
+      this.logger.info(`[PollingService] 首次轮询延迟 ${initialDelay}ms...`);
+      await this.delay(initialDelay, signal);
+    }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {

@@ -163,4 +163,56 @@ export class WorkflowService extends CozeBaseClient {
       );
     }
   }
+
+  /**
+   * 从工作流结果中提取 markdown 内容
+   * @param result - 工作流运行历史结果
+   * @returns markdown 内容字符串，未找到返回 null
+   */
+  extractMarkdownContent(result: WorkflowRunHistory): string | null {
+    const output = result.output;
+    if (!output) {
+      this.logger.warn('[WorkflowService] 工作流结果中没有 output 数据');
+      return null;
+    }
+
+    // 尝试各种可能的字段名（按优先级排序）
+    const possibleFields = [
+      'markdown',      // 最可能的字段名
+      'content',       // 通用内容字段
+      'text',          // 文本字段
+      'result',        // 结果字段
+      'data',          // 数据字段
+      'output',        // 输出字段
+      'analysis',      // 分析结果
+      'response',      // 响应内容
+    ];
+
+    for (const field of possibleFields) {
+      const value = output[field];
+      if (typeof value === 'string' && value.trim()) {
+        this.logger.debug(`[WorkflowService] 从字段 "${field}" 提取到内容`);
+        return value.trim();
+      }
+    }
+
+    // 如果 output 本身就是字符串
+    if (typeof output === 'string') {
+      return (output as string).trim();
+    }
+
+    // 尝试将 output 转为 JSON 字符串
+    try {
+      const jsonStr = JSON.stringify(output);
+      if (jsonStr && jsonStr !== '{}' && jsonStr !== '[]') {
+        this.logger.warn('[WorkflowService] 未找到标准字段，返回完整 output JSON');
+        return jsonStr;
+      }
+    } catch {
+      // 忽略序列化错误
+    }
+
+    this.logger.warn('[WorkflowService] 无法从工作流结果中提取有效内容');
+    return null;
+  }
 }
