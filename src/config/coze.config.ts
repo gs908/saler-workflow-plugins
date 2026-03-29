@@ -31,6 +31,22 @@ const getConfig = () => {
         isAsync: true,
       },
     },
+
+    // 轮询配置（首次延迟单位为分钟，间隔单位为秒，最大次数为次数）
+    polling: {
+      // 首次轮询延迟（分钟），默认 5 分钟
+      initialDelay: (process.env.COZE_POLLING_INITIAL_DELAY
+        ? parseInt(process.env.COZE_POLLING_INITIAL_DELAY, 10)
+        : 5) * 60 * 1000,
+      // 后续轮询间隔（秒），默认 30 秒
+      interval: (process.env.COZE_POLLING_INTERVAL
+        ? parseInt(process.env.COZE_POLLING_INTERVAL, 10)
+        : 30) * 1000,
+      // 最大轮询次数，默认 60 次
+      maxAttempts: process.env.COZE_POLLING_MAX_ATTEMPTS
+        ? parseInt(process.env.COZE_POLLING_MAX_ATTEMPTS, 10)
+        : 60,
+    },
   };
 };
 
@@ -45,4 +61,16 @@ export function validateCozeConfig(): boolean {
     console.error('[CozeConfig] 配置无效，请检查 .env 文件中的 COZE_API_TOKEN 和 COZE_MEETING_WORKFLOW_ID');
   }
   return isValid;
+}
+
+/**
+ * 轮询配置接口
+ */
+export interface CozePollingConfig {
+  /** 首次轮询延迟（毫秒） */
+  initialDelay: number;
+  /** 后续轮询间隔（毫秒） */
+  interval: number;
+  /** 最大轮询次数 */
+  maxAttempts: number;
 }

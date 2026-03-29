@@ -10,11 +10,11 @@ import { Logger, FileUploadResult, WorkflowRunHistory } from './types';
  * 会议处理配置
  */
 export interface MeetingProcessorConfig {
-  /** 轮询首次延迟（毫秒），默认 5 分钟 */
+  /** 轮询首次延迟（分钟），默认从 .env 读取 */
   initialDelay?: number;
-  /** 轮询间隔（毫秒），默认 30 秒 */
+  /** 轮询间隔（秒），默认从 .env 读取 */
   pollInterval?: number;
-  /** 最大轮询次数，默认 60 次（约 30 分钟） */
+  /** 最大轮询次数，默认从 .env 读取 */
   maxPollAttempts?: number;
   /** 回调配置 */
   callback?: CallbackConfig;
@@ -74,7 +74,20 @@ export class MeetingProcessor {
       warn: console.warn,
       error: console.error,
     };
+
+    // 从全局配置获取轮询默认值
+    this.defaultPollingConfig = cozeConfig.polling || {
+      initialDelay: 5 * 60 * 1000,
+      interval: 30 * 1000,
+      maxAttempts: 60,
+    };
   }
+
+  private defaultPollingConfig: {
+    initialDelay: number;
+    interval: number;
+    maxAttempts: number;
+  };
 
   /**
    * 获取默认回调配置（从环境变量读取）
@@ -131,11 +144,11 @@ export class MeetingProcessor {
         `[MeetingProcessor] 工作流提交成功: execute_id=${workflowResult.execute_id}`
       );
 
-      // 步骤 3: 轮询等待工作流完成（首次延迟 5 分钟）
+      // 步骤 3: 轮询等待工作流完成
       const pollConfig = {
-        initialDelay: this.config.initialDelay ?? 5 * 60 * 1000, // 5 分钟默认
-        interval: this.config.pollInterval ?? 30000,             // 30 秒默认
-        maxAttempts: this.config.maxPollAttempts ?? 60,          // 60 次默认
+        initialDelay: this.config.initialDelay ?? this.defaultPollingConfig.initialDelay,
+        interval: this.config.pollInterval ?? this.defaultPollingConfig.interval,
+        maxAttempts: this.config.maxPollAttempts ?? this.defaultPollingConfig.maxAttempts,
         signal,
       };
 
@@ -237,9 +250,9 @@ export class MeetingProcessor {
 
       // 轮询等待
       const pollConfig = {
-        initialDelay: this.config.initialDelay ?? 5 * 60 * 1000,
-        interval: this.config.pollInterval ?? 30000,
-        maxAttempts: this.config.maxPollAttempts ?? 60,
+        initialDelay: this.config.initialDelay ?? this.defaultPollingConfig.initialDelay,
+        interval: this.config.pollInterval ?? this.defaultPollingConfig.interval,
+        maxAttempts: this.config.maxPollAttempts ?? this.defaultPollingConfig.maxAttempts,
         signal,
       };
 
@@ -276,6 +289,48 @@ export class MeetingProcessor {
       result.success = false;
       result.error = error instanceof Error ? error.message : String(error);
       return result;
+    }
+  }
+
+  /**
+   * 在后台等待工作流完成并推送回调（5分钟首次延迟）
+   * @param executeId - 执行 ID
+   * @param signal - 取消信号
+   */
+  async waitAndPushCallback(
+    executeId: string,
+    signal?: AbortSignal
+  ): Promise<void> {
+    try {
+      this.logger.info(`[MeetingProcessor] 开始后台等待: executeId=${executeId}, 首次延迟 5 分钟`);
+
+      const pollConfig = {
+        initialDelay: this.config.initialDelay ?? this.defaultPollingConfig.initialDelay,
+        interval: this.config.pollInterval ?? this.defaultPollingConfig.interval,
+        maxAttempts: this.config.maxPollAttempts ?? this.defaultPollingConfig.maxAttempts,
+        signal,
+      };
+
+      const finalResult = await this.pollingService.waitForCompletion(
+        this.workflowService.getConfig().workflowId,
+        executeId,
+        pollConfig
+      );
+
+      const analysisContent = this.workflowService.extractMarkdownContent(finalResult);
+
+      if (this.callbackService) {
+        await this.callbackService.pushAnalysisCallback(
+          executeId,
+          finalResult,
+          this.workflowService
+        );
+        this.logger.info(`[MeetingProcessor] 回调推送完成: executeId=${executeId}`);
+      } else {
+        this.logger.info(`[MeetingProcessor] 等待完成（无回调）: executeId=${executeId}, status=${finalResult.status}, content=${analysisContent?.length ?? 0} 字符`);
+      }
+    } catch (err) {
+      this.logger.error(`[MeetingProcessor] 后台等待失败: executeId=${executeId}`, err);
     }
   }
 

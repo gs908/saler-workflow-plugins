@@ -52,7 +52,7 @@ export interface WorkflowExecuteResponse {
 export interface WorkflowRunHistory {
   executeId: string;
   workflowId: string;
-  status: 'running' | 'success' | 'failed' | 'completed';
+  status: string;
   input?: Record<string, unknown>;
   output?: Record<string, unknown>;
   error?: string;
@@ -86,6 +86,18 @@ export interface PollingOptions {
 }
 
 /**
+ * 轮询配置
+ */
+export interface PollingConfig {
+  /** 首次轮询延迟（毫秒） */
+  initialDelay: number;
+  /** 后续轮询间隔（毫秒） */
+  interval: number;
+  /** 最大轮询次数 */
+  maxAttempts: number;
+}
+
+/**
  * Coze 客户端配置
  * 支持依赖注入，解耦全局配置
  */
@@ -98,6 +110,8 @@ export interface CozeClientConfig {
   workflowId: string;
   /** 是否异步执行 */
   isAsync: boolean;
+  /** 轮询配置 */
+  polling?: PollingConfig;
 }
 
 /**

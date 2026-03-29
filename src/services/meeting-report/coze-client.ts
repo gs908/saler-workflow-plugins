@@ -78,11 +78,12 @@ export class CozeBaseClient {
 export function createConfigFromGlobal(): CozeClientConfig {
   // 使用动态导入避免循环依赖
   const { cozeConfig } = require('../../config/coze.config');
-  
+
   return {
     token: cozeConfig.token,
     baseURL: cozeConfig.baseURL,
     workflowId: cozeConfig.workflows.meetingAnalysis.workflowId,
     isAsync: cozeConfig.workflows.meetingAnalysis.isAsync,
+    polling: cozeConfig.polling,
   };
 }

@@ -34,7 +34,10 @@ export class HttpClient {
         return response;
       },
       (error) => {
-        console.error('[HTTP Response Error]', error.response?.data || error.message);
+        const status = error.response?.status;
+        const statusText = error.response?.statusText;
+        const cozeErrorMsg = error.response?.data?.msg || error.response?.data?.message;
+        console.error(`[HTTP Response Error] ${status} ${statusText}${cozeErrorMsg ? ` - ${cozeErrorMsg}` : ''}`);
         return Promise.reject(error);
       }
     );
