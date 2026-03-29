@@ -52,6 +52,10 @@
     <div class="timer-section">
         <h2>异步结果获取</h2>
         <div class="form-group">
+            <label for="manualWorkflowId">手动输入 workflow_id:</label>
+            <input type="text" id="manualWorkflowId" placeholder="手动输入用于测试" />
+        </div>
+        <div class="form-group">
             <label for="manualExecuteId">手动输入 execute_id:</label>
             <input type="text" id="manualExecuteId" placeholder="手动输入用于测试" />
         </div>
@@ -217,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const debugUrlEl = document.getElementById('debugUrl');
     const outputEl = document.getElementById('output');
     const asyncResultEl = document.getElementById('asyncResult');
+    const manualWorkflowIdEl = document.getElementById('manualWorkflowId');
     const manualExecuteIdEl = document.getElementById('manualExecuteId');
     const timerEl = document.getElementById('timer');
 
@@ -384,9 +389,9 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchResultBtn.disabled = true;
         fetchResultBtn.textContent = '获取中...';
 
-        try {
-            const workflowId = '{{workflowId}}';
-            const response = await fetch('/saler-plugins/api/coze/workflow-result/' + workflowId + '/' + executeId);
+        try {            
+            const workflowId = manualWorkflowIdEl.value.trim() || '{{workflowId}}';
+            const response = await fetch('/saler-plugins/api/coze/workflow-result/' + workflowId + '/' + executeId+'?raw=true');
             const result = await response.json();
 
             if (result.success) {

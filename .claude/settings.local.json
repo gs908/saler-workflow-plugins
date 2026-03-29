@@ -12,7 +12,8 @@
       "Bash(grep -A5 '\"\"dev\"\"' package.json)",
       "Bash(node -r ts-node/register ./bin/www)",
       "Bash(netstat -ano)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Skill(commit-commands:commit)"
     ]
   }
 }

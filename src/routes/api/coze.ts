@@ -12,8 +12,8 @@ const router = Router();
 
 /**
  * 格式化coze返回的运行结果，减少不用的输出
- * @param resp 
- * @returns 
+ * @param resp
+ * @returns
  */
 function parseCozeResponse(resp: Record<string, unknown>) {
   if (!resp) {
@@ -30,7 +30,9 @@ function parseCozeResponse(resp: Record<string, unknown>) {
       return {
         success: true,
         data: { executeId, workflowId, status: execute_status },
-        msg: formatMsg +` you can check running status by debug_url:${debug_url}!`,
+        msg:
+          formatMsg +
+          ` you can check running status by debug_url:${debug_url}!`,
       };
     } else if (execute_status === "Success") {
       if (!output) {
@@ -191,6 +193,7 @@ router.get(
   "/workflow-result/:workflowId/:executeId",
   async (req: Request, res: Response) => {
     try {
+      const { raw = false } = req.query;
       const { workflowId, executeId } = req.params;
 
       // 参数校验
@@ -211,8 +214,11 @@ router.get(
 
       const result = await getWorkflowResult(wfId, execId);
       const formattedResult = parseCozeResponse(result);
-
-      return res.json(formattedResult);
+      if (raw) {
+        return res.json({ data: result, success: true });
+      } else {
+        return res.json(formattedResult);
+      }
     } catch (error) {
       console.error("[API] 查询工作流结果失败:", error);
       return res.status(500).json({
