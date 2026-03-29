@@ -37,6 +37,9 @@ function validateCreateParams(body: any): { error: string } | null {
 function validateAsyncParams(body: any): { error: string } | null {
   if (!body.name || typeof body.name !== 'string') return { error: '缺少必填参数: name（任务名称）' };
   if (!body.pipelineId || typeof body.pipelineId !== 'string') return { error: '缺少必填参数: execute_id（任务编号）' };
+  if (!body.filePaths || (!Array.isArray(body.filePaths) && typeof body.filePaths !== 'string')) {
+    return { error: '缺少必填参数: filePaths（文件路径）' };
+  }
   return null;
 }
 

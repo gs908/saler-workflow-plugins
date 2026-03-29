@@ -139,23 +139,31 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
   if (!task.callbackUrl) return;
 
   const resultPath = path.join(task.workDir, 'output', 'result.json');
-  let resultData: unknown = null;
+  let resultData: any = {
+    type:       'video_create',
+    taskId:     task.id,
+    execute_id: task.pipelineId ?? null,
+    sessionId:  task.sessionId ?? null,
+    outcome:    'fail',
+  };
 
+  // 尝试读取 result.json
   try {
     const raw = fs.readFileSync(resultPath, 'utf-8');
     const parsed = JSON.parse(raw);
     resultData = {
+      ...resultData,
       ...parsed,
-      type:       'video_create',
       path:       parsed.output_file,
       outcome:    parsed.status === 'success' ? 'success' : 'fail',
-      taskId:     task.id,
-      execute_id:  task.pipelineId ?? null,
-      sessionId:  task.sessionId ?? null,
+      hasResult:  true,
     };
-  } catch {
-    console.warn(`[Claude Task ${task.id}] result.json not found or invalid at ${resultPath}, skip callback`);
-    return;
+    console.log(`[Claude Task ${task.id}] result.json 读取成功`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[Claude Task ${task.id}] result.json 读取失败 (${msg})，将回调基本状态信息，outcome=fail`);
+    resultData.hasResult = false;
+    resultData.error = `result.json not found or invalid: ${msg}`;
   }
 
   try {
@@ -163,7 +171,7 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       timeout: 10000,
     });
-    console.log(`[Claude Task ${task.id}] Callback sent to ${task.callbackUrl}`);
+    console.log(`[Claude Task ${task.id}] Callback sent to ${task.callbackUrl}, outcome=${resultData.outcome}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[Claude Task ${task.id}] Callback failed: ${msg}`);
