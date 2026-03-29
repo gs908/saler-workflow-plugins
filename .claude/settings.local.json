@@ -13,7 +13,13 @@
       "Bash(node -r ts-node/register ./bin/www)",
       "Bash(netstat -ano)",
       "Bash(npx tsc:*)",
-      "Skill(commit-commands:commit)"
+      "Skill(commit-commands:commit)",
+      "Bash(tasklist /FI 'PID eq 5616')",
+      "Bash(tasklist)",
+      "Bash(curl -s -X POST http://localhost:5699/saler-plugins/api/coze/meeting-analysis -H \"Content-Type: application/json\" -d \"{}\")",
+      "mcp__plugin_oh-my-claudecode_t__lsp_diagnostics_directory",
+      "Bash(cd /d D:workspacesagentic-workspacesaler-workflow-plugins)",
+      "Bash(npm run:*)"
     ]
   }
 }

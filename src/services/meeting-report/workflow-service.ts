@@ -141,10 +141,13 @@ export class WorkflowService extends CozeBaseClient {
         );
       }
 
-      this.logger.info(`[WorkflowService] 查询成功, 状态: ${response.data.status}`);
+      const realData = response.data[0] as Record<string, unknown>
+      const status = realData?.execute_status as string
+      this.logger.info(`[WorkflowService] 查询成功, 状态: ${status}`);
 
       return {
-        ...response.data,
+        ...realData,
+        status,
         executeId,
         workflowId,
       };
