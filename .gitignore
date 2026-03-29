@@ -74,5 +74,6 @@ dist/
 pnpm-debug.log*
 .pnpm-store/
 
-data/runtime/*
+data/*
 .omc/*
+
