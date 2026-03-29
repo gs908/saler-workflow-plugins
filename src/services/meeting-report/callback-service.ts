@@ -113,7 +113,7 @@ export class CallbackService {
       this.logger.info(`[CallbackService] 回调推送成功: executeId=${executeId}`);
       return true;
     } catch (error) {
-      this.logger.error('[CallbackService] 回调推送失败:', error);
+      // this.logger.error('[CallbackService] 回调推送失败:', error);
 
       if (error instanceof CozeServiceError) {
         throw error;

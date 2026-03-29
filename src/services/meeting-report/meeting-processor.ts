@@ -293,7 +293,7 @@ export class MeetingProcessor {
   }
 
   /**
-   * 在后台等待工作流完成并推送回调（5分钟首次延迟）
+   * 在后台等待工作流完成并推送回调
    * @param executeId - 执行 ID
    * @param signal - 取消信号
    */
@@ -302,7 +302,7 @@ export class MeetingProcessor {
     signal?: AbortSignal
   ): Promise<void> {
     try {
-      this.logger.info(`[MeetingProcessor] 开始后台等待: executeId=${executeId}, 首次延迟 5 分钟`);
+      this.logger.info(`[MeetingProcessor] 开始后台等待: executeId=${executeId}`);
 
       const pollConfig = {
         initialDelay: this.config.initialDelay ?? this.defaultPollingConfig.initialDelay,
