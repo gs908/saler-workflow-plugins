@@ -82,6 +82,13 @@ scanTsRoutes(routesPath);
 const workflowTestRouter = require('./routes/workflow-test');
 app.use('/saler-plugins/workflow-test', workflowTestRouter);
 
+// 视频切片服务
+const { default: sliceRouter } = require('./services/video-slice/router');
+const { config: sliceConfig } = require('./services/video-slice/config');
+// HLS 静态文件托管（playlist_url 依赖此路径）
+app.use(sliceConfig.hlsUrlPathPrefix, express.static(sliceConfig.hlsOutputDir));
+app.use('/slice', sliceRouter);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
