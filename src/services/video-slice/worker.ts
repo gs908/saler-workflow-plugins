@@ -86,13 +86,13 @@ async function postCallback(job: Job): Promise<void> {
     type:       job.type ?? 'video_create',
     taskId:     job.taskId ?? null,
     execute_id: job.execute_id ?? null,
-    outcome:    job.status === 'done' ? 'success' : 'fail',
+    outcome:    'success', // 视频本身成功，切片失败属于降级，不影响整体结果
   };
 
   body.path = job.source;
   if (job.videoUrl) body.video_url = job.videoUrl;
   if (job.status === 'done') body.playlist_url = job.playlistUrl;
-  if (job.status === 'fail') body.error = job.error;
+  if (job.status === 'fail') body.slice_error = job.error; // 降级：告知切片失败原因，但 outcome 仍为 success
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (job.callbackSecret) headers['X-Presales-Video-Callback-Secret'] = job.callbackSecret;

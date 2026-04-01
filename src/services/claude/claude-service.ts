@@ -185,7 +185,7 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
       taskId:      task.id,
       name:        task.name ?? undefined,
       type:        resultData.type ?? 'video_create',
-      videoUrl:    resultData.video_url ?? resultData.url ?? undefined,
+      videoUrl:    resultData.path,
     };
     enqueue(job);
     console.log(`[Claude Task ${task.id}] 切片任务已入队，等待 worker 完成后回调下游`);
