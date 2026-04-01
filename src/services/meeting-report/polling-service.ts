@@ -16,7 +16,7 @@ export class PollingService extends WorkflowService {
    * 检查是否为终止状态
    */
   private isTerminalStatus(status: string): boolean {
-    return ['success', 'completed', 'failed'].includes(status);
+    return ['Success', 'Completed', 'Failed'].includes(status);
   }
 
   /**
@@ -52,7 +52,7 @@ export class PollingService extends WorkflowService {
     executeId: string,
     options: PollingOptions = {}
   ): Promise<WorkflowRunHistory> {
-    const { maxAttempts = 30, interval = 2000, signal, initialDelay = 0 } = options;
+    const { maxAttempts = 20, interval = 30000, signal, initialDelay = 180000 } = options;
 
     this.logger.info(
       `[PollingService] 开始轮询工作流执行状态: maxAttempts=${maxAttempts}, executeId=${executeId}, initialDelay=${initialDelay}ms`
@@ -60,7 +60,7 @@ export class PollingService extends WorkflowService {
 
     // 首次延迟（如果配置了）
     if (initialDelay > 0) {
-      this.logger.info(`[PollingService] 首次轮询延迟 ${initialDelay}ms...`);
+      this.logger.info(`[PollingService] 首次轮询延迟 ${initialDelay / 1000 }s...`);
       await this.delay(initialDelay, signal);
     }
 
@@ -102,69 +102,6 @@ export class PollingService extends WorkflowService {
         }
         
         // 否则等待后继续
-        await this.delay(interval, signal);
-      }
-    }
-
-    throw new CozeWorkflowError(
-      `工作流执行超时，已轮询 ${maxAttempts} 次`,
-      undefined,
-      workflowId,
-      executeId
-    );
-  }
-
-  /**
-   * 轮询并带回调通知
-   * @param workflowId - 工作流 ID
-   * @param executeId - 执行 ID
-   * @param onProgress - 进度回调
-   * @param options - 轮询配置选项
-   */
-  async waitForCompletionWithCallback(
-    workflowId: string,
-    executeId: string,
-    onProgress: (result: WorkflowRunHistory, attempt: number) => void,
-    options: PollingOptions = {}
-  ): Promise<WorkflowRunHistory> {
-    const { maxAttempts = 30, interval = 2000, signal } = options;
-
-    this.logger.info(
-      `[PollingService] 开始轮询（带回调）: maxAttempts=${maxAttempts}, executeId=${executeId}`
-    );
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const result = await this.getWorkflowHistory(workflowId, executeId);
-
-        // 通知进度
-        onProgress(result, attempt);
-
-        // 如果状态已完成或失败，直接返回
-        if (this.isTerminalStatus(result.status)) {
-          this.logger.info(
-            `[PollingService] 工作流执行${result.status}, 共轮询 ${attempt} 次`
-          );
-          return result;
-        }
-
-        await this.delay(interval, signal);
-      } catch (error) {
-        if (error instanceof CozeServiceError && error.message === '轮询已取消') {
-          throw error;
-        }
-        
-        this.logger.error(`[PollingService] 第 ${attempt} 次轮询失败:`, error);
-        
-        if (attempt === maxAttempts) {
-          throw new CozeWorkflowError(
-            `轮询失败（第 ${attempt} 次）: ${error instanceof Error ? error.message : String(error)}`,
-            error instanceof Error ? error : undefined,
-            workflowId,
-            executeId
-          );
-        }
-        
         await this.delay(interval, signal);
       }
     }

@@ -4,8 +4,8 @@
   "scripts": {
     "start": "node ./bin/www",
     "start:tsx": "tsx ./bin/www",
-    "dev": "nodemon --exec \"node -r ts-node/register\" ./bin/www",
-    "dev:tsx": "tsx watch ./bin/www",
+    "dev": "set DEBUG=coze:* && nodemon --exec \"node -r ts-node/register\" ./bin/www",
+    "dev:tsx": "set DEBUG=coze:* && tsx watch ./bin/www",
     "build": "tsc",
     "type-check": "tsc --noEmit",
     "postinstall": "pnpm rebuild better-sqlite3"

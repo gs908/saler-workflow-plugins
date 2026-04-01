@@ -1,11 +1,12 @@
 import { Router, Request, Response } from "express";
 import {
-  executeMeetingAnalysis,
+  MeetingProcessor,
   getWorkflowResult,
-  executeMeetingAnalysisAndWait,
   uploadFileToCoze,
   WorkflowExecuteResponse,
   WorkflowRunHistory,
+  executeMeetingAnalysis,
+  executeMeetingAnalysisAndWait
 } from "../../services/meeting-report";
 
 const router = Router();
@@ -134,22 +135,26 @@ router.post("/meeting-analysis", async (req: Request, res: Response) => {
       `[API] 执行会议分析: ${meetingName}, fileId: ${fileId || "-"}, fileName: ${fileName || "-"}, 等待完成: ${waitForCompletion}`,
     );
 
-    // 如果不需要等待，直接返回 Coze API 响应
+    const processor = new MeetingProcessor();
+
+    // 如果不需要等待，提交工作流后立即返回，后台进行 5 分钟延迟 → 轮询 → 回调
     if (!waitForCompletion) {
-      const result: WorkflowExecuteResponse = await executeMeetingAnalysis(
-        meetingName,
-        txtUrl,
-        fileId,
-        fileName,
-      );
+      // 提交工作流获取 execute_id
+      const result = await executeMeetingAnalysis(meetingName, txtUrl, fileId, fileName);
+
+      // 立即返回，背景启动等待+回调
+      processor.waitAndPushCallback(result.execute_id).catch((err) => {
+        console.error('[API] 后台会议分析失败:', err);
+      });
+
       return res.json({
         success: true,
         data: result,
       });
     }
 
-    // 执行并等待完成
-    const result: WorkflowRunHistory = await executeMeetingAnalysisAndWait(
+    // 执行并等待完成（同步轮询，适用于测试或需要立即获取结果的场景）
+    const result = await executeMeetingAnalysisAndWait(
       meetingName,
       txtUrl,
       fileId,
