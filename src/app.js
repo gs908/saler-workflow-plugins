@@ -1,5 +1,5 @@
 // Load environment variables from .env file
-require('dotenv').config();
+require('dotenv').config({override: true});
 
 // Register ts-node for TypeScript support
 require('ts-node').register({
@@ -19,7 +19,6 @@ const createError = require('http-errors'),
     path = require('path'),
     fs = require('fs'),
     scanner = require('route-scanner');
-
 
 // view engine setup
 app.engine('hbs',require('hbs').__express);

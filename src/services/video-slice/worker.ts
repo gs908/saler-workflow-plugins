@@ -84,6 +84,12 @@ function buildPlaylistUrl(jobId: string): string {
 }
 
 async function postCallback(job: Job): Promise<void> {
+  // 无回调地址时只存库不回调
+  if (!job.callbackUrl) {
+    console.log(`[Slice Worker] job=${job.id} 无回调地址，跳过 POST`);
+    return;
+  }
+
   const body: Record<string, unknown> = {
     type:       job.type ?? 'video_create',
     taskId:     job.taskId ?? null,

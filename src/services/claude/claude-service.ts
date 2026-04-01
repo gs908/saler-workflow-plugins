@@ -136,10 +136,8 @@ function broadcastAndPersist(taskId: string, event: string, data: unknown): void
   }
 }
 
-/** 任务完成后读取 workDir/result.json 并 POST 给 callbackUrl */
+/** 任务完成后读取 workDir/result.json，切片存库， optionally 回调下游 */
 async function triggerCallback(task: TaskInfo): Promise<void> {
-  if (!task.callbackUrl) return;
-
   const resultPath = path.join(task.workDir, 'output', 'result.json');
   let resultData: any = {
     type:       'video_create',
@@ -180,7 +178,7 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
       status:      'pending',
       createdAt:   Date.now(),
       source:      resultData.path,
-      callbackUrl: task.callbackUrl!,
+      callbackUrl: task.callbackUrl ?? '', // 可能为空，worker 会判断
       execute_id:  task.pipelineId ?? undefined,
       taskId:      task.id,
       name:        task.name ?? undefined,
@@ -189,9 +187,12 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
     };
     updateTask(task.id, { videoPath: resultData.path });
     enqueue(job);
-    console.log(`[Claude Task ${task.id}] 切片任务已入队，等待 worker 完成后回调下游`);
-    return; // 由 worker 负责回调下游，此处不再 POST
+    console.log(`[Claude Task ${task.id}] 切片任务已入队${task.callbackUrl ? '，等待 worker 完成后回调下游' : '（无回调地址）'}`);
+    return; // 由 worker 负责
   }
+
+  // 无需切片，直接回调下游（如果有 callbackUrl）
+  if (!task.callbackUrl) return;
 
   try {
     await axios.post(task.callbackUrl, resultData, {
@@ -238,6 +239,7 @@ export async function executeTask(task: TaskInfo, resumeSessionId?: string): Pro
         systemPrompt: buildSystemPrompt(task),
         includePartialMessages: true,
         maxTurns: 50,
+        ...(process.env.CLAUDE_EXECUTABLE_PATH ? { pathToClaudeCodeExecutable: process.env.CLAUDE_EXECUTABLE_PATH } : {}),
         ...(resumeSessionId ? { resume: resumeSessionId } : {}),
       },
     });
