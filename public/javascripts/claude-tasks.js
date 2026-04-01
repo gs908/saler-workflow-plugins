@@ -68,6 +68,13 @@ function bindEvents() {
   document.getElementById('modalOverlay').addEventListener('click', function (e) {
     if (e.target === this) hideModal();
   });
+
+  // 视频弹框
+  document.getElementById('btnPlayVideo').addEventListener('click', openVideoModal);
+  document.getElementById('btnCloseVideoModal').addEventListener('click', closeVideoModal);
+  document.getElementById('videoModalOverlay').addEventListener('click', function (e) {
+    if (e.target === this) closeVideoModal();
+  });
 }
 
 // ---- API 调用 ----
@@ -601,6 +608,24 @@ function fillTaskInfo(task) {
   document.getElementById('infoPrompt').textContent = task.prompt || '-';
   document.getElementById('infoStartTime').textContent = task.startTime ? formatTime(task.startTime) : '-';
 
+  // 视频播放入口
+  var videoArea   = document.getElementById('infoVideoArea');
+  var sliceStatus = document.getElementById('infoSliceStatus');
+  var playBtn     = document.getElementById('btnPlayVideo');
+
+  if (task.status === 'completed' && (task.playlistUrl || task.videoPath)) {
+    videoArea.style.display = 'flex';
+    sliceStatus.innerHTML = task.playlistUrl
+      ? '<span style="color:#16a34a">✅ 切片完成</span>'
+      : '<span style="color:#d97706">⏳ 切片中</span>';
+
+    // 记录播放源供弹框使用
+    playBtn._playlistUrl = task.playlistUrl || null;
+    playBtn._videoUrl    = task.playlistUrl ? null : (API_BASE + '/' + task.id + '/video');
+  } else {
+    videoArea.style.display = 'none';
+  }
+
   var cancelBtn = document.getElementById('btnCancelTask');
   cancelBtn.style.display = (task.status === 'running' || task.status === 'pending') ? 'inline-flex' : 'none';
 
@@ -679,4 +704,40 @@ function formatTime(timestamp) {
   var pad = function (n) { return n < 10 ? '0' + n : n; };
   return pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
     pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+// ---- 视频弹框 ----
+var _hlsInstance = null;
+
+function openVideoModal() {
+  var playBtn  = document.getElementById('btnPlayVideo');
+  var videoEl  = document.getElementById('modalVideo');
+  var overlay  = document.getElementById('videoModalOverlay');
+
+  // 销毁上一次的 hls 实例
+  if (_hlsInstance) { _hlsInstance.destroy(); _hlsInstance = null; }
+  videoEl.src = '';
+
+  if (playBtn._playlistUrl) {
+    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+      _hlsInstance = new Hls();
+      _hlsInstance.loadSource(playBtn._playlistUrl);
+      _hlsInstance.attachMedia(videoEl);
+    } else {
+      videoEl.src = playBtn._playlistUrl; // Safari 原生支持 HLS
+    }
+  } else if (playBtn._videoUrl) {
+    videoEl.src = playBtn._videoUrl;
+  }
+
+  overlay.style.display = 'flex';
+}
+
+function closeVideoModal() {
+  var videoEl = document.getElementById('modalVideo');
+  var overlay = document.getElementById('videoModalOverlay');
+  videoEl.pause();
+  videoEl.src = '';
+  if (_hlsInstance) { _hlsInstance.destroy(); _hlsInstance = null; }
+  overlay.style.display = 'none';
 }

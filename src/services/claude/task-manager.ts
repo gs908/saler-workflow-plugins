@@ -28,6 +28,8 @@ export interface TaskInfo {
   callbackUrl?: string;
   resultText?: string;
   sessionId?: string;  // Claude Code 会话 ID，用于续接执行
+  videoPath?: string;
+  playlistUrl?: string;
   abortController: AbortController;
 }
 
@@ -52,7 +54,9 @@ function rowToInfo(row: TaskRow): TaskInfo {
     pipelineId: row.pipelineId ?? undefined,
     callbackUrl: row.callbackUrl ?? undefined,
     resultText: row.resultText ?? undefined,
-    sessionId: row.sessionId ?? undefined,
+    sessionId:   row.sessionId   ?? undefined,
+    videoPath:   row.videoPath   ?? undefined,
+    playlistUrl: row.playlistUrl ?? undefined,
     abortController: abortControllers.get(row.id) ?? new AbortController(),
   };
 }
@@ -86,8 +90,10 @@ class TaskManager {
       uploadedFiles: params.uploadedFiles ? JSON.stringify(params.uploadedFiles) : null,
       pipelineId: params.pipelineId ?? null,
       callbackUrl: params.callbackUrl ?? null,
-      resultText: null,
-      sessionId: null,
+      resultText:  null,
+      sessionId:   null,
+      videoPath:   null,
+      playlistUrl: null,
     };
 
     insertTask(row);

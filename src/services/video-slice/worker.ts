@@ -4,6 +4,7 @@ import path from 'node:path';
 import axios from 'axios';
 import { config } from './config';
 import { uploadDir, buildMinioUrl } from './minio-client';
+import { updateTask } from '../claude/db';
 import type { Job } from './types';
 
 const queue: Job[] = [];
@@ -43,6 +44,7 @@ async function processNext(): Promise<void> {
     }
 
     job.status = 'done';
+    if (job.taskId) updateTask(job.taskId, { playlistUrl: job.playlistUrl });
     console.log(`[Slice Worker] job=${job.id} done playlist=${job.playlistUrl}`);
     await postCallback(job);
   } catch (err) {

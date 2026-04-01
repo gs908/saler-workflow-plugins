@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as os from 'os';
 import axios from 'axios';
 import { taskManager, TaskInfo } from './task-manager';
-import { insertEvent } from './db';
+import { insertEvent, updateTask } from './db';
 import { enqueue } from '../video-slice/worker';
 import type { Job } from '../video-slice/types';
 
@@ -187,6 +187,7 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
       type:        resultData.type ?? 'video_create',
       videoUrl:    resultData.path,
     };
+    updateTask(task.id, { videoPath: resultData.path });
     enqueue(job);
     console.log(`[Claude Task ${task.id}] 切片任务已入队，等待 worker 完成后回调下游`);
     return; // 由 worker 负责回调下游，此处不再 POST

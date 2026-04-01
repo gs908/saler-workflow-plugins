@@ -27,6 +27,8 @@ export interface TaskRow {
   callbackUrl: string | null;
   resultText: string | null;
   sessionId: string | null;
+  videoPath: string | null;
+  playlistUrl: string | null;
 }
 
 export interface EventRow {
@@ -93,15 +95,17 @@ db.exec(`
 // 兼容旧库：如果 sessionId 列不存在则加上
 try {
   db.exec('ALTER TABLE tasks ADD COLUMN sessionId TEXT');
-} catch {
-  // 列已存在，忽略
-}
+} catch { /* 列已存在，忽略 */ }
 // 兼容旧库：如果 name 列不存在则加上
 try {
   db.exec("ALTER TABLE tasks ADD COLUMN name TEXT NOT NULL DEFAULT ''");
-} catch {
-  // 列已存在，忽略
-}
+} catch { /* 列已存在，忽略 */ }
+try {
+  db.exec('ALTER TABLE tasks ADD COLUMN videoPath TEXT');
+} catch { /* 列已存在，忽略 */ }
+try {
+  db.exec('ALTER TABLE tasks ADD COLUMN playlistUrl TEXT');
+} catch { /* 列已存在，忽略 */ }
 
 // 启动时将残留 running 状态的任务标为 error（服务重启导致任务中断）
 const staleCount = db.prepare(
@@ -128,19 +132,22 @@ const stmtUpdateTask = db.prepare<Partial<TaskRow> & { id: string }>(`
     endTime     = COALESCE(@endTime, endTime),
     error       = COALESCE(@error, error),
     resultText  = COALESCE(@resultText, resultText),
-    sessionId   = COALESCE(@sessionId, sessionId)
+    sessionId   = COALESCE(@sessionId, sessionId),
+    videoPath   = COALESCE(@videoPath, videoPath),
+    playlistUrl = COALESCE(@playlistUrl, playlistUrl)
   WHERE id = @id
 `);
 
-export function updateTask(id: string, fields: Partial<Pick<TaskRow, 'status' | 'endTime' | 'error' | 'resultText' | 'sessionId'>>): void {
-  // better-sqlite3 命名参数要求对象里存在所有 @key，缺失会报 RangeError
+export function updateTask(id: string, fields: Partial<Pick<TaskRow, 'status' | 'endTime' | 'error' | 'resultText' | 'sessionId' | 'videoPath' | 'playlistUrl'>>): void {
   stmtUpdateTask.run({
     id,
-    status: fields.status ?? null,
-    endTime: fields.endTime !== undefined ? fields.endTime : null,
-    error: fields.error !== undefined ? fields.error : null,
-    resultText: fields.resultText !== undefined ? fields.resultText : null,
-    sessionId: fields.sessionId !== undefined ? fields.sessionId : null,
+    status:      fields.status      ?? null,
+    endTime:     fields.endTime     ?? null,
+    error:       fields.error       ?? null,
+    resultText:  fields.resultText  ?? null,
+    sessionId:   fields.sessionId   ?? null,
+    videoPath:   fields.videoPath   ?? null,
+    playlistUrl: fields.playlistUrl ?? null,
   } as any);
 }
 

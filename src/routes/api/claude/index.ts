@@ -308,6 +308,43 @@ router.get('/:taskId/status', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /:taskId/video - 流式返回原始视频文件
+ */
+router.get('/:taskId/video', (req: Request, res: Response) => {
+  const taskId = req.params.taskId as string;
+  const task = taskManager.getSummary(taskId);
+  if (!task?.videoPath) {
+    res.status(404).json({ error: '视频文件不存在' });
+    return;
+  }
+  if (!fs.existsSync(task.videoPath)) {
+    res.status(404).json({ error: '视频文件不存在于磁盘' });
+    return;
+  }
+  const stat = fs.statSync(task.videoPath);
+  const range = req.headers.range;
+  if (range) {
+    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(startStr, 10);
+    const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': end - start + 1,
+      'Content-Type': 'video/mp4',
+    });
+    fs.createReadStream(task.videoPath, { start, end }).pipe(res);
+  } else {
+    res.writeHead(200, {
+      'Content-Length': stat.size,
+      'Content-Type': 'video/mp4',
+      'Accept-Ranges': 'bytes',
+    });
+    fs.createReadStream(task.videoPath).pipe(res);
+  }
+});
+
+/**
  * GET / - 任务列表
  */
 router.get('/', (_req: Request, res: Response) => {

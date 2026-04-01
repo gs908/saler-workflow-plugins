@@ -64,6 +64,15 @@
             <span class="ct-info-label">开始时间</span>
             <span class="ct-info-value" id="infoStartTime">-</span>
           </div>
+          <!-- 视频播放入口 -->
+          <div id="infoVideoArea" style="display:none;" class="ct-info-row">
+            <span class="ct-info-label">视频</span>
+            <span class="ct-info-value">
+              <span id="infoSliceStatus"></span>
+              <button class="ct-btn ct-btn-sm ct-btn-primary" id="btnPlayVideo" style="margin-left:8px;">▶ 播放</button>
+            </span>
+          </div>
+
           <div class="ct-info-actions" id="infoActions">
             <button class="ct-btn ct-btn-danger" id="btnCancelTask" style="display:none;">取消任务</button>
             <button class="ct-btn ct-btn-primary" id="btnResumeTask" style="display:none;">续接执行</button>
@@ -127,5 +136,14 @@
   </div>
 </div>
 
+<!-- 视频播放弹框 -->
+<div id="videoModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#000;border-radius:10px;padding:16px;width:80vw;max-width:900px;position:relative;">
+    <button id="btnCloseVideoModal" style="position:absolute;top:8px;right:12px;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;z-index:1;">&times;</button>
+    <video id="modalVideo" controls style="width:100%;max-height:70vh;display:block;border-radius:6px;"></video>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
 <script src="/javascripts/claude-tasks.js"></script>
