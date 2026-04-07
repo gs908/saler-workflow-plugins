@@ -291,8 +291,9 @@ export async function executeTask(task: TaskInfo, resumeSessionId?: string): Pro
     });
     broadcastEnd(task.id);
 
-    // 触发外部回调（异步，不阻塞）
-    if (latestTask?.callbackUrl) {
+    // 触发切片 + 外部回调（异步，不阻塞）
+    // 无 callbackUrl 时也会切片入队，只是跳过最终的 HTTP 回调
+    if (latestTask) {
       triggerCallback(latestTask).catch(() => {});
     }
   }
