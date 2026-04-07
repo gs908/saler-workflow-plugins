@@ -73,7 +73,10 @@ dist/
 # pnpm
 pnpm-debug.log*
 .pnpm-store/
-
+.pnpm-lock.yaml
 data/*
 .omc/*
+
+#cursor
+.cursor/
 
