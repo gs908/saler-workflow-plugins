@@ -63,7 +63,7 @@ function runFfmpeg(source: string, m3u8Path: string): Promise<void> {
       '-i', source,
       '-c:v', 'libx264',
       '-c:a', 'aac',
-      '-hls_time', '30',
+      '-hls_time', String(config.hlsSegmentTime),
       '-hls_list_size', '0',
       '-hls_segment_filename', path.join(path.dirname(m3u8Path), 'segment%03d.ts'),
       '-f', 'hls',
