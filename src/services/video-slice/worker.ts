@@ -7,6 +7,8 @@ import { uploadDir, buildMinioUrl } from './minio-client';
 import { updateTask } from '../claude/db';
 import type { Job } from './types';
 
+const COVER_FILENAME = 'cover.jpg';
+
 const queue: Job[] = [];
 let running = false;
 
@@ -25,10 +27,14 @@ async function processNext(): Promise<void> {
 
   const outputDir = path.join(config.hlsOutputDir, job.id);
   fs.mkdirSync(outputDir, { recursive: true });
-  const m3u8Path = path.join(outputDir, 'index.m3u8');
+  const m3u8Path  = path.join(outputDir, 'index.m3u8');
+  const coverPath = path.join(outputDir, COVER_FILENAME);
 
   try {
-    await runFfmpeg(job.source, m3u8Path);
+    await Promise.all([
+      runFfmpeg(job.source, m3u8Path),
+      extractCover(job.source, coverPath),
+    ]);
 
     if (config.storageType === 'minio') {
       const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -51,24 +57,17 @@ async function processNext(): Promise<void> {
     job.status = 'fail';
     job.error = err instanceof Error ? err.message : String(err);
     console.error(`[Slice Worker] job=${job.id} failed: ${job.error}`);
+    if (config.storageType === 'minio') {
+      fs.rmSync(outputDir, { recursive: true, force: true });
+    }
     await postCallback(job);
   } finally {
     processNext();
   }
 }
 
-function runFfmpeg(source: string, m3u8Path: string): Promise<void> {
+function execFfmpeg(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    const args = [
-      '-i', source,
-      '-c:v', 'libx264',
-      '-c:a', 'aac',
-      '-hls_time', String(config.hlsSegmentTime),
-      '-hls_list_size', '0',
-      '-hls_segment_filename', path.join(path.dirname(m3u8Path), 'segment%03d.ts'),
-      '-f', 'hls',
-      m3u8Path,
-    ];
     const proc = spawn(config.ffmpegPath, args);
     proc.stderr.on('data', (d) => process.stdout.write(`[ffmpeg] ${d}`));
     proc.on('close', (code) => {
@@ -77,6 +76,30 @@ function runFfmpeg(source: string, m3u8Path: string): Promise<void> {
     });
     proc.on('error', reject);
   });
+}
+
+function runFfmpeg(source: string, m3u8Path: string): Promise<void> {
+  return execFfmpeg([
+    '-i', source,
+    '-c:v', 'libx264',
+    '-c:a', 'aac',
+    '-hls_time', String(config.hlsSegmentTime),
+    '-hls_list_size', '0',
+    '-hls_segment_filename', path.join(path.dirname(m3u8Path), 'segment%03d.ts'),
+    '-f', 'hls',
+    m3u8Path,
+  ]);
+}
+
+function extractCover(source: string, coverPath: string): Promise<void> {
+  return execFfmpeg([
+    '-ss', '0',
+    '-i', source,
+    '-vframes', '1',
+    '-q:v', '2',
+    '-f', 'image2',
+    coverPath,
+  ]);
 }
 
 function buildPlaylistUrl(jobId: string): string {
@@ -99,7 +122,12 @@ async function postCallback(job: Job): Promise<void> {
 
   body.path = job.source;
   if (job.videoUrl) body.video_url = job.videoUrl;
-  if (job.status === 'done') body.playlist_url = job.playlistUrl;
+  if (job.status === 'done') {
+    body.playlist_url = job.playlistUrl;
+    if (job.playlistUrl) {
+      body.cover_url = job.playlistUrl.replace('index.m3u8', COVER_FILENAME);
+    }
+  }
   if (job.status === 'fail') body.slice_error = job.error; // 降级：告知切片失败原因，但 outcome 仍为 success
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
