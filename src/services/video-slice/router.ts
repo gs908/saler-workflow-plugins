@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from './config';
-import { enqueue } from './worker';
+import { enqueue, buildJobUrls } from './worker';
 import type { CreateJobRequest, Job } from './types';
 
 const router = Router();
 
-// POST /slice/jobs — 接收切片任务（供外部调用，内部直接调 enqueue 即可）
+// POST /slice/jobs — 接收切片任务
+// 内部调用（带 callbackUrl）：切片完成后回调下游
+// 对外调用（不带 callbackUrl）：立即返回预计算好的 playlistUrl / coverUrl，后台异步切片
 router.post('/jobs', (req, res) => {
   if (config.ingestSecret) {
     const provided = req.headers['x-slice-ingest-secret'] ?? '';
@@ -17,15 +19,18 @@ router.post('/jobs', (req, res) => {
   }
 
   const body = req.body as Partial<CreateJobRequest>;
-  if (!body.source || !body.callbackUrl) {
-    res.status(400).json({ error: 'source and callbackUrl are required' });
+  if (!body.source) {
+    res.status(400).json({ error: 'source is required' });
     return;
   }
 
+  const jobId = uuidv4();
+  const hlsDate = new Date().toISOString().slice(0, 10);
   const job: Job = {
-    id:             uuidv4(),
+    id:             jobId,
     status:         'pending',
     createdAt:      Date.now(),
+    hlsDate,
     source:         body.source,
     callbackUrl:    body.callbackUrl,
     execute_id:     body.execute_id,
@@ -38,6 +43,13 @@ router.post('/jobs', (req, res) => {
 
   enqueue(job);
   console.log(`[Slice] Accepted job=${job.id} source=${job.source}`);
+
+  if (!body.callbackUrl) {
+    const { playlistUrl, coverUrl } = buildJobUrls(jobId, hlsDate, body.name);
+    res.status(202).json({ jobId, execute_id: body.execute_id ?? null, playlistUrl, coverUrl });
+    return;
+  }
+
   res.status(202).json({ jobId: job.id });
 });
 

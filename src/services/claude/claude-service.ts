@@ -177,8 +177,9 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
       id:          task.id,
       status:      'pending',
       createdAt:   Date.now(),
+      hlsDate:     new Date().toISOString().slice(0, 10),
       source:      resultData.path,
-      callbackUrl: task.callbackUrl ?? '', // 可能为空，worker 会判断
+      callbackUrl: task.callbackUrl ?? undefined,
       execute_id:  task.pipelineId ?? undefined,
       taskId:      task.id,
       name:        task.name ?? undefined,

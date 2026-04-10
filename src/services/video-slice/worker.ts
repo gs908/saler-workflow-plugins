@@ -25,7 +25,7 @@ async function processNext(): Promise<void> {
   job.status = 'running';
   console.log(`[Slice Worker] job=${job.id} source=${job.source}`);
 
-  const outputDir = path.join(config.hlsOutputDir, job.id);
+  const outputDir = path.join(config.hlsOutputDir, ...buildMinioPrefix(job.id, job.hlsDate, job.name).split('/'));
   fs.mkdirSync(outputDir, { recursive: true });
   const m3u8Path  = path.join(outputDir, 'index.m3u8');
   const coverPath = path.join(outputDir, COVER_FILENAME);
@@ -37,16 +37,13 @@ async function processNext(): Promise<void> {
     ]);
 
     if (config.storageType === 'minio') {
-      const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-      const prefix = job.name
-        ? `${date}/${job.name}/${job.id}`
-        : `${date}/${job.id}`;
+      const prefix = buildMinioPrefix(job.id, job.hlsDate, job.name);
       await uploadDir(outputDir, prefix);
       job.playlistUrl = buildMinioUrl(`${prefix}/index.m3u8`);
       fs.rmSync(outputDir, { recursive: true, force: true });
       console.log(`[Slice Worker] job=${job.id} uploaded to MinIO, local temp removed`);
     } else {
-      job.playlistUrl = buildPlaylistUrl(job.id);
+      job.playlistUrl = buildPlaylistUrl(buildMinioPrefix(job.id, job.hlsDate, job.name));
     }
 
     job.status = 'done';
@@ -102,8 +99,29 @@ function extractCover(source: string, coverPath: string): Promise<void> {
   ]);
 }
 
-function buildPlaylistUrl(jobId: string): string {
-  return `${config.hlsPublicBaseUrl}${config.hlsUrlPathPrefix}/${jobId}/index.m3u8`;
+function buildPlaylistUrl(prefix: string): string {
+  return `${config.hlsPublicBaseUrl}${config.hlsUrlPathPrefix}/${prefix}/index.m3u8`;
+}
+
+function buildMinioPrefix(jobId: string, date: string, name?: string): string {
+  return name ? `${date}/${name}/${jobId}` : `${date}/${jobId}`;
+}
+
+/** 预计算 job 完成后的播放地址和封面地址，需传入入队时固定的 hlsDate 以确保与实际上传路径一致 */
+export function buildJobUrls(jobId: string, hlsDate: string, name?: string): { playlistUrl: string; coverUrl: string } {
+  if (config.storageType === 'minio') {
+    const prefix = buildMinioPrefix(jobId, hlsDate, name);
+    return {
+      playlistUrl: buildMinioUrl(`${prefix}/index.m3u8`),
+      coverUrl:    buildMinioUrl(`${prefix}/${COVER_FILENAME}`),
+    };
+  }
+  const prefix = buildMinioPrefix(jobId, hlsDate, name);
+  const playlistUrl = buildPlaylistUrl(prefix);
+  return {
+    playlistUrl,
+    coverUrl: playlistUrl.replace('index.m3u8', COVER_FILENAME),
+  };
 }
 
 async function postCallback(job: Job): Promise<void> {
