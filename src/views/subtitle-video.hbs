@@ -1,0 +1,415 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f8faff; color: #1e293b; height: 100vh; display: flex; flex-direction: column; }
+
+/* ── 顶部导航 ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; height: 52px;
+  background: #fff; border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+.topbar-title { font-size: 16px; font-weight: 700; color: #1e293b; }
+.btn-new {
+  padding: 7px 18px; background: #2563eb; color: #fff;
+  border: none; border-radius: 6px; font-size: 13px; cursor: pointer;
+  font-family: inherit;
+}
+.btn-new:hover { background: #1d4ed8; }
+
+/* ── 主体分栏 ── */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* ── 左侧任务列表 ── */
+.sidebar {
+  width: 280px; flex-shrink: 0;
+  background: #fff; border-right: 1px solid #e2e8f0;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-header {
+  padding: 14px 16px; font-size: 12px; font-weight: 600;
+  color: #64748b; border-bottom: 1px solid #f1f5f9;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.task-list { flex: 1; overflow-y: auto; }
+.task-item {
+  padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+.task-item:hover { background: #f8faff; }
+.task-item.active { background: #eff6ff; border-left: 3px solid #2563eb; }
+.task-name {
+  font-size: 13px; font-weight: 500; color: #1e293b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+.task-meta { display: flex; align-items: center; gap: 8px; }
+.status-badge {
+  font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: 500;
+}
+.status-pending  { background: #fef9c3; color: #854d0e; }
+.status-processing { background: #dbeafe; color: #1d4ed8; }
+.status-completed  { background: #dcfce7; color: #166534; }
+.status-error      { background: #fee2e2; color: #991b1b; }
+.task-time { font-size: 11px; color: #94a3b8; }
+.empty-hint { padding: 40px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+
+/* ── 右侧详情 ── */
+.detail {
+  flex: 1; overflow-y: auto; padding: 24px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* ── 新建表单 ── */
+.form-card {
+  background: #fff; border-radius: 10px; border: 1px solid #e2e8f0;
+  padding: 24px;
+}
+.form-card h2 { font-size: 15px; font-weight: 600; margin-bottom: 18px; color: #1e293b; }
+.form-row { margin-bottom: 14px; }
+.form-label { font-size: 13px; color: #475569; margin-bottom: 5px; display: block; }
+.form-input {
+  width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;
+  font-size: 13px; font-family: inherit; color: #1e293b; background: #fff;
+}
+.form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.file-input-wrap { position: relative; }
+.file-input-wrap input[type=file] { width: 100%; }
+.btn-submit {
+  width: 100%; padding: 10px; background: #2563eb; color: #fff;
+  border: none; border-radius: 6px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: inherit; margin-top: 4px;
+}
+.btn-submit:hover { background: #1d4ed8; }
+.btn-submit:disabled { background: #93c5fd; cursor: not-allowed; }
+.submit-msg { margin-top: 10px; font-size: 13px; text-align: center; }
+.submit-msg.ok  { color: #16a34a; }
+.submit-msg.err { color: #dc2626; }
+
+/* ── 任务详情卡片 ── */
+.detail-card {
+  background: #fff; border-radius: 10px; border: 1px solid #e2e8f0;
+  padding: 24px;
+}
+.detail-card h2 { font-size: 15px; font-weight: 600; margin-bottom: 18px; }
+.detail-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; }
+.detail-label { font-size: 12px; color: #64748b; min-width: 72px; padding-top: 2px; }
+.detail-value { font-size: 13px; color: #1e293b; word-break: break-all; }
+
+/* 进度条 */
+.progress-wrap { margin: 16px 0; }
+.progress-bar-bg {
+  height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; background: #2563eb; border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.progress-text { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+/* 操作按钮 */
+.action-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.btn-action {
+  padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; font-family: inherit; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-download { background: #2563eb; color: #fff; }
+.btn-download:hover { background: #1d4ed8; }
+.btn-play { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+.btn-play:hover { background: #dcfce7; }
+
+/* 欢迎提示 */
+.welcome {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; color: #94a3b8;
+}
+.welcome-icon { font-size: 48px; margin-bottom: 12px; }
+.welcome p { font-size: 14px; }
+
+/* 加载动画 */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 16px; height: 16px; border: 2px solid #dbeafe;
+  border-top-color: #2563eb; border-radius: 50%;
+  animation: spin 0.7s linear infinite; display: inline-block;
+}
+</style>
+
+<div class="topbar">
+  <span class="topbar-title">字幕视频生成</span>
+  <button class="btn-new" onclick="showNewForm()">+ 新建任务</button>
+</div>
+
+<div class="main">
+  <!-- 左侧任务列表 -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>任务列表</span>
+      <span id="task-count" style="color:#94a3b8">-</span>
+    </div>
+    <div class="task-list" id="task-list">
+      <div class="empty-hint">暂无任务</div>
+    </div>
+  </div>
+
+  <!-- 右侧详情 -->
+  <div class="detail" id="detail">
+    <!-- 新建表单（默认隐藏） -->
+    <div class="form-card" id="new-form" style="display:none">
+      <h2>新建字幕视频任务</h2>
+      <div class="form-row">
+        <label class="form-label">任务名称 <span style="color:#94a3b8;font-size:11px">（用于文件归档）</span></label>
+        <input class="form-input" id="f-name" type="text" placeholder="例：20260413-张三-某银行会议">
+      </div>
+      <div class="form-row">
+        <label class="form-label">音频文件 <span style="color:#dc2626">*</span></label>
+        <div class="file-input-wrap">
+          <input class="form-input" id="f-audio" type="file" accept=".mp3,.m4a,.wav,.aac,.ogg">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">字幕文件 <span style="color:#dc2626">*</span></label>
+        <div class="file-input-wrap">
+          <input class="form-input" id="f-txt" type="file" accept=".txt">
+        </div>
+      </div>
+      <button class="btn-submit" id="btn-submit" onclick="submitForm()">开始生成</button>
+      <div id="submit-msg" class="submit-msg"></div>
+    </div>
+
+    <!-- 任务详情（点击任务后显示） -->
+    <div class="detail-card" id="job-detail" style="display:none">
+      <h2 id="d-name">任务详情</h2>
+      <div class="detail-row">
+        <span class="detail-label">任务ID</span>
+        <span class="detail-value" id="d-id">-</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">业务ID</span>
+        <span class="detail-value" id="d-execute-id">-</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">状态</span>
+        <span class="detail-value" id="d-status">-</span>
+      </div>
+      <div class="progress-wrap" id="d-progress-wrap" style="display:none">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="d-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="progress-text" id="d-progress-text"></div>
+      </div>
+      <div id="d-error" style="display:none;margin-top:12px;padding:10px;background:#fee2e2;border-radius:6px;font-size:13px;color:#991b1b"></div>
+      <div class="action-row" id="d-actions"></div>
+    </div>
+
+    <!-- 欢迎提示 -->
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">🎬</div>
+      <p>选择左侧任务查看详情，或点击「新建任务」上传文件</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/saler-plugins/api/subtitle-video';
+let jobs = [];
+let selectedId = null;
+let pollTimer = null;
+
+// ── 初始化 ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadList();
+  startPolling();
+});
+
+// ── 轮询控制 ──
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(() => {
+    loadList();
+    if (selectedId) updateDetail(selectedId);
+  }, 3000);
+}
+
+function stopPolling() {
+  if (!jobs.some(j => j.status === 'pending' || j.status === 'processing')) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+// ── 加载列表 ──
+async function loadList() {
+  try {
+    const res = await fetch(`${API}/list`);
+    jobs = await res.json();
+    renderList();
+    stopPolling();
+    if (selectedId) updateDetail(selectedId);
+  } catch(e) {
+    console.error('loadList error', e);
+  }
+}
+
+function renderList() {
+  const el = document.getElementById('task-list');
+  document.getElementById('task-count').textContent = jobs.length;
+  if (!jobs.length) {
+    el.innerHTML = '<div class="empty-hint">暂无任务</div>';
+    return;
+  }
+  el.innerHTML = jobs.map(j => `
+    <div class="task-item ${j.id === selectedId ? 'active' : ''}" onclick="selectJob('${j.id}')">
+      <div class="task-name">${j.execute_id || j.id}</div>
+      <div class="task-meta">
+        <span class="status-badge status-${j.status}">${statusLabel(j.status)}</span>
+        <span class="task-time">${fmtTime(j.created_at)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── 选中任务 ──
+function selectJob(id) {
+  selectedId = id;
+  document.getElementById('new-form').style.display = 'none';
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('job-detail').style.display = 'block';
+  renderList();
+  updateDetail(id);
+  startPolling();
+}
+
+function updateDetail(id) {
+  const job = jobs.find(j => j.id === id);
+  if (!job) return;
+
+  document.getElementById('d-name').textContent = job.execute_id || job.id;
+  document.getElementById('d-id').textContent = job.id;
+  document.getElementById('d-execute-id').textContent = job.execute_id || '-';
+  document.getElementById('d-status').innerHTML = `<span class="status-badge status-${job.status}">${statusLabel(job.status)}</span>`;
+
+  // 进度条
+  const progressWrap = document.getElementById('d-progress-wrap');
+  const pct = parseProgress(job.progress);
+  if (job.status === 'processing' || job.status === 'pending') {
+    progressWrap.style.display = 'block';
+    document.getElementById('d-progress-fill').style.width = pct + '%';
+    document.getElementById('d-progress-text').textContent = job.progress || '等待处理...';
+  } else if (job.status === 'completed') {
+    progressWrap.style.display = 'block';
+    document.getElementById('d-progress-fill').style.width = '100%';
+    document.getElementById('d-progress-text').textContent = '处理完成';
+  } else {
+    progressWrap.style.display = 'none';
+  }
+
+  // 错误
+  const errEl = document.getElementById('d-error');
+  if (job.status === 'error' && job.error) {
+    errEl.style.display = 'block';
+    errEl.textContent = job.error;
+  } else {
+    errEl.style.display = 'none';
+  }
+
+  // 操作按钮
+  const actions = document.getElementById('d-actions');
+  if (job.status === 'completed') {
+    let btns = `<a class="btn-action btn-download" href="${API}/${job.id}/video" download>⬇ 下载视频</a>`;
+    if (job.playlist_url) {
+      btns += `<button class="btn-action btn-play" onclick="openHls('${job.playlist_url}')">▶ 播放 HLS</button>`;
+    }
+    actions.innerHTML = btns;
+  } else {
+    actions.innerHTML = '';
+  }
+}
+
+// ── 新建表单 ──
+function showNewForm() {
+  selectedId = null;
+  renderList();
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('job-detail').style.display = 'none';
+  document.getElementById('new-form').style.display = 'block';
+  document.getElementById('submit-msg').textContent = '';
+}
+
+async function submitForm() {
+  const name  = document.getElementById('f-name').value.trim();
+  const audio = document.getElementById('f-audio').files[0];
+  const txt   = document.getElementById('f-txt').files[0];
+  const msgEl = document.getElementById('submit-msg');
+  const btn   = document.getElementById('btn-submit');
+
+  if (!audio || !txt) {
+    msgEl.className = 'submit-msg err';
+    msgEl.textContent = '请选择音频文件和字幕文件';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '上传中...';
+  msgEl.textContent = '';
+
+  const fd = new FormData();
+  fd.append('audio', audio);
+  fd.append('txt', txt);
+  if (name) fd.append('name', name);
+
+  try {
+    const res  = await fetch(`${API}/upload-and-async`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '提交失败');
+
+    msgEl.className = 'submit-msg ok';
+    msgEl.textContent = `任务已创建，ID: ${data.jobId}`;
+    btn.textContent = '开始生成';
+    btn.disabled = false;
+
+    // 重置表单
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-audio').value = '';
+    document.getElementById('f-txt').value = '';
+
+    await loadList();
+    selectJob(data.jobId);
+    startPolling();
+  } catch(e) {
+    msgEl.className = 'submit-msg err';
+    msgEl.textContent = e.message;
+    btn.textContent = '开始生成';
+    btn.disabled = false;
+  }
+}
+
+// ── HLS 播放 ──
+function openHls(url) {
+  window.open(url, '_blank');
+}
+
+// ── 工具函数 ──
+function statusLabel(s) {
+  return { pending: '等待', processing: '处理中', completed: '已完成', error: '失败' }[s] || s;
+}
+
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function parseProgress(p) {
+  if (!p) return 0;
+  // [进度] 60.0s / 302.0s (19.8%)
+  const m = p.match(/\((\d+\.?\d*)%\)/);
+  if (m) return parseFloat(m[1]);
+  // [INFO] ... 时长: 302.0s ... 初始阶段显示 2%
+  if (p.includes('[INFO]')) return 2;
+  // [完成]
+  if (p.includes('[完成]')) return 100;
+  return 0;
+}
+</script>

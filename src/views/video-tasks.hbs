@@ -1,0 +1,465 @@
+<link rel="stylesheet" href="/stylesheets/claude-tasks.css" />
+
+<style>
+/* ── Tab 栏 ── */
+.vt-tabs {
+  display: flex; gap: 0; margin-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+.vt-tab {
+  padding: 10px 24px; font-size: 14px; font-weight: 500;
+  color: #64748b; cursor: pointer; border: none; background: none;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  font-family: inherit; transition: color 0.15s;
+}
+.vt-tab:hover { color: #1e293b; }
+.vt-tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+
+/* ── Tab 内容面板 ── */
+.vt-panel { display: none; }
+.vt-panel.active { display: block; }
+
+/* ── 字幕视频面板复用 ct- 样式 ── */
+.sv-main {
+  display: flex; gap: 16px;
+  height: calc(100vh - 185px); min-height: 500px;
+}
+.sv-sidebar {
+  width: 300px; min-width: 300px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sv-sidebar-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid #e2e8f0;
+  font-size: 12px; font-weight: 600; color: #64748b;
+}
+.sv-task-list { flex: 1; overflow-y: auto; }
+.sv-item {
+  padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+.sv-item:hover { background: #f8faff; }
+.sv-item.active { background: #eff6ff; border-left: 3px solid #2563eb; }
+.sv-item-name {
+  font-size: 13px; font-weight: 500; color: #1e293b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;
+}
+.sv-item-meta { display: flex; align-items: center; gap: 8px; }
+.sv-detail {
+  flex: 1; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+}
+
+/* 进度条 */
+.sv-progress-bg { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 12px 0 4px; }
+.sv-progress-fill { height: 100%; background: #2563eb; border-radius: 4px; transition: width 0.4s ease; }
+.sv-progress-text { font-size: 12px; color: #64748b; }
+
+/* 状态徽章 */
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.badge-pending    { background: #fef9c3; color: #854d0e; }
+.badge-processing { background: #dbeafe; color: #1d4ed8; }
+.badge-completed  { background: #dcfce7; color: #166534; }
+.badge-error      { background: #fee2e2; color: #991b1b; }
+
+/* 新建表单 */
+.sv-form { display: flex; flex-direction: column; gap: 14px; }
+.sv-form label { font-size: 12px; color: #64748b; margin-bottom: 4px; display: block; }
+.sv-form input[type=text], .sv-form input[type=file] {
+  width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;
+  font-size: 13px; font-family: inherit; color: #1e293b;
+}
+.sv-form input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.sv-submit {
+  padding: 10px; background: #2563eb; color: #fff; border: none; border-radius: 6px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.sv-submit:hover { background: #1d4ed8; }
+.sv-submit:disabled { background: #93c5fd; cursor: not-allowed; }
+
+.sv-actions { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.sv-btn {
+  padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; font-family: inherit; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.sv-btn-primary { background: #2563eb; color: #fff; }
+.sv-btn-primary:hover { background: #1d4ed8; }
+.sv-btn-play { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+.sv-btn-play:hover { background: #dcfce7; }
+
+.sv-placeholder {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; color: #94a3b8; font-size: 14px; gap: 8px;
+}
+.sv-error-box {
+  padding: 10px 14px; background: #fee2e2; border-radius: 6px;
+  font-size: 13px; color: #991b1b; margin-top: 8px;
+}
+</style>
+
+<div class="ct-page">
+  <!-- 顶部标题 -->
+  <div class="ct-header">
+    <div class="ct-header-left">
+      <h2 class="ct-title">视频任务管理</h2>
+      <span class="ct-subtitle">Claude 生成视频 / 字幕合成视频</span>
+    </div>
+    <div class="ct-header-actions" id="header-actions">
+      <!-- Claude tab 按钮 -->
+      <div id="hdr-claude">
+        <button class="ct-btn ct-btn-primary" id="btnNewTask">+ 新建任务</button>
+        <button class="ct-btn ct-btn-ghost" id="btnRefresh">刷新列表</button>
+      </div>
+      <!-- 字幕视频 tab 按钮 -->
+      <div id="hdr-subtitle" style="display:none">
+        <button class="ct-btn ct-btn-primary" onclick="svShowForm()">+ 新建任务</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 栏 -->
+  <div class="vt-tabs">
+    <button class="vt-tab active" onclick="switchTab('claude')">Claude 生成视频</button>
+    <button class="vt-tab" onclick="switchTab('subtitle')">字幕合成视频</button>
+  </div>
+
+  <!-- Tab: Claude 任务（复用现有 hbs 结构） -->
+  <div class="vt-panel active" id="panel-claude">
+    <div class="ct-main">
+      <div class="ct-sidebar">
+        <div class="ct-sidebar-header">
+          <span>任务列表</span>
+          <span class="ct-task-count" id="taskCount">0</span>
+        </div>
+        <div class="ct-task-list" id="taskList">
+          <div class="ct-empty-state" id="emptyState">
+            <p>暂无任务</p>
+            <p class="ct-empty-hint">点击「新建任务」开始</p>
+          </div>
+        </div>
+      </div>
+      <div class="ct-detail">
+        <div class="ct-detail-placeholder" id="detailPlaceholder">
+          <p>选择左侧任务查看详情</p>
+          <p class="ct-empty-hint">或新建一个任务</p>
+        </div>
+        <div class="ct-detail-content" id="detailContent" style="display:none;">
+          <div class="ct-task-info">
+            <div class="ct-info-row"><span class="ct-info-label">任务 ID</span><span class="ct-info-value" id="infoTaskId">-</span></div>
+            <div class="ct-info-row"><span class="ct-info-label">状态</span><span id="infoStatus">-</span></div>
+            <div class="ct-info-row"><span class="ct-info-label">Skill</span><span class="ct-info-value" id="infoSkill">-</span></div>
+            <div class="ct-info-row"><span class="ct-info-label">工作目录</span><span class="ct-info-value ct-mono" id="infoWorkDir">-</span></div>
+            <div class="ct-info-row"><span class="ct-info-label">Prompt</span><span class="ct-info-value" id="infoPrompt">-</span></div>
+            <div class="ct-info-row"><span class="ct-info-label">开始时间</span><span class="ct-info-value" id="infoStartTime">-</span></div>
+            <div id="infoVideoArea" style="display:none;" class="ct-info-row">
+              <span class="ct-info-label">视频</span>
+              <span class="ct-info-value">
+                <span id="infoSliceStatus"></span>
+                <button class="ct-btn ct-btn-sm ct-btn-primary" id="btnPlayVideo" style="margin-left:8px;">▶ 播放</button>
+              </span>
+            </div>
+            <div class="ct-info-actions" id="infoActions">
+              <button class="ct-btn ct-btn-danger" id="btnCancelTask" style="display:none;">取消任务</button>
+              <button class="ct-btn ct-btn-primary" id="btnResumeTask" style="display:none;">续接执行</button>
+              <button class="ct-btn ct-btn-warning" id="btnRetryTask" style="display:none;">重新执行</button>
+              <button class="ct-btn ct-btn-ghost" id="btnDeleteTask">删除任务</button>
+            </div>
+          </div>
+          <div class="ct-output-header">
+            <span>Claude 输出</span>
+            <button class="ct-btn ct-btn-sm ct-btn-ghost" id="btnClearOutput">清空</button>
+          </div>
+          <div class="ct-output" id="outputArea">
+            <div class="ct-output-content" id="outputContent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: 字幕视频 -->
+  <div class="vt-panel" id="panel-subtitle">
+    <div class="sv-main">
+      <!-- 左侧列表 -->
+      <div class="sv-sidebar">
+        <div class="sv-sidebar-header">
+          <span>任务列表</span>
+          <span id="sv-count" style="color:#94a3b8">-</span>
+        </div>
+        <div class="sv-task-list" id="sv-list">
+          <div style="padding:40px 16px;text-align:center;color:#94a3b8;font-size:13px">暂无任务</div>
+        </div>
+      </div>
+      <!-- 右侧详情 -->
+      <div class="sv-detail" id="sv-detail">
+        <div class="sv-placeholder" id="sv-placeholder">
+          <span style="font-size:40px">🎬</span>
+          <span>选择左侧任务查看详情，或点击「新建任务」</span>
+        </div>
+
+        <!-- 新建表单 -->
+        <div id="sv-new-form" style="display:none">
+          <div style="font-size:15px;font-weight:600;margin-bottom:16px;color:#1e293b">新建字幕视频任务</div>
+          <div class="sv-form">
+            <div>
+              <label>任务名称</label>
+              <input type="text" id="sv-f-name" placeholder="例：20260413-张三-某银行会议">
+            </div>
+            <div>
+              <label>音频文件 <span style="color:#dc2626">*</span></label>
+              <input type="file" id="sv-f-audio" accept=".mp3,.m4a,.wav,.aac">
+            </div>
+            <div>
+              <label>字幕文件 <span style="color:#dc2626">*</span></label>
+              <input type="file" id="sv-f-txt" accept=".txt">
+            </div>
+            <button class="sv-submit" id="sv-btn-submit" onclick="svSubmit()">开始生成</button>
+            <div id="sv-submit-msg" style="font-size:13px;text-align:center;min-height:18px"></div>
+          </div>
+        </div>
+
+        <!-- 任务详情 -->
+        <div id="sv-job-detail" style="display:none">
+          <div style="font-size:15px;font-weight:600;margin-bottom:16px;color:#1e293b" id="sv-d-name"></div>
+          <div class="ct-task-info">
+            <div class="ct-info-row"><span class="ct-info-label">任务ID</span><span class="ct-info-value" id="sv-d-id"></span></div>
+            <div class="ct-info-row"><span class="ct-info-label">业务ID</span><span class="ct-info-value" id="sv-d-execute-id"></span></div>
+            <div class="ct-info-row"><span class="ct-info-label">状态</span><span id="sv-d-status"></span></div>
+          </div>
+          <div id="sv-d-progress-wrap" style="display:none">
+            <div class="sv-progress-bg"><div class="sv-progress-fill" id="sv-d-fill" style="width:0%"></div></div>
+            <div class="sv-progress-text" id="sv-d-progress-text"></div>
+          </div>
+          <div id="sv-d-error" class="sv-error-box" style="display:none"></div>
+          <div class="sv-actions" id="sv-d-actions"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Claude 新建任务弹窗 -->
+<div class="ct-modal-overlay" id="modalOverlay" style="display:none;">
+  <div class="ct-modal">
+    <div class="ct-modal-header">
+      <h3>新建任务</h3>
+      <button class="ct-modal-close" id="btnCloseModal">&times;</button>
+    </div>
+    <form id="newTaskForm">
+      <div class="ct-form-group">
+        <label class="ct-label">任务名称 <span class="ct-required">*</span></label>
+        <input class="ct-input" type="text" id="inputName" placeholder="简短描述这个任务" required />
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">任务描述（提示词） <span class="ct-required">*</span></label>
+        <textarea class="ct-input ct-textarea" id="inputPrompt" rows="4" required>根据报告内容，生成视频，使用默认主题</textarea>
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">工作目录 <span class="ct-required">*</span></label>
+        <input class="ct-input" type="text" id="inputWorkDir" placeholder="例如: C:/Users/xxx/projects" required />
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">任务编号（pipelineId） <span class="ct-required">*</span></label>
+        <input class="ct-input" type="text" id="inputPipelineId" placeholder="如: HuaDian-001" required />
+        <span class="ct-hint">实际工作区 = 工作目录 / 任务编号</span>
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">Skill</label>
+        <select class="ct-input ct-select" id="inputSkill"></select>
+      </div>
+      <div class="ct-form-group">
+        <label class="ct-label">上传文件</label>
+        <input class="ct-input ct-file" type="file" id="inputFiles" multiple accept=".md,.txt,.doc,.docx,.json,.csv" />
+      </div>
+      <div class="ct-modal-footer">
+        <button type="button" class="ct-btn ct-btn-ghost" id="btnCancelModal">取消</button>
+        <button type="submit" class="ct-btn ct-btn-primary">开始执行</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 视频播放弹框 -->
+<div id="videoModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#000;border-radius:10px;padding:16px;width:80vw;max-width:900px;position:relative;">
+    <button id="btnCloseVideoModal" style="position:absolute;top:8px;right:12px;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;z-index:1;">&times;</button>
+    <video id="modalVideo" controls style="width:100%;max-height:70vh;display:block;border-radius:6px;"></video>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+<script src="/javascripts/claude-tasks.js"></script>
+
+<script>
+// ══════════════════════════════════════════
+//  Tab 切换
+// ══════════════════════════════════════════
+const SV_API = '/saler-plugins/api/subtitle-video';
+
+function switchTab(tab) {
+  document.querySelectorAll('.vt-tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0) === (tab === 'claude'));
+  });
+  document.getElementById('panel-claude').classList.toggle('active', tab === 'claude');
+  document.getElementById('panel-subtitle').classList.toggle('active', tab === 'subtitle');
+  document.getElementById('hdr-claude').style.display   = tab === 'claude'   ? '' : 'none';
+  document.getElementById('hdr-subtitle').style.display = tab === 'subtitle' ? '' : 'none';
+
+  if (tab === 'subtitle') {
+    svLoadList();
+    svStartPolling();
+  }
+}
+
+// ══════════════════════════════════════════
+//  字幕视频逻辑
+// ══════════════════════════════════════════
+let svJobs = [];
+let svSelectedId = null;
+let svPollTimer = null;
+
+function svStartPolling() {
+  if (svPollTimer) return;
+  svPollTimer = setInterval(async () => {
+    await svLoadList();
+    if (svSelectedId) svUpdateDetail(svSelectedId);
+    if (!svJobs.some(j => j.status === 'pending' || j.status === 'processing')) {
+      clearInterval(svPollTimer); svPollTimer = null;
+    }
+  }, 3000);
+}
+
+async function svLoadList() {
+  try {
+    const res = await fetch(`${SV_API}/list`);
+    svJobs = await res.json();
+    svRenderList();
+  } catch(e) { console.error('svLoadList', e); }
+}
+
+function svRenderList() {
+  const el = document.getElementById('sv-list');
+  document.getElementById('sv-count').textContent = svJobs.length;
+  if (!svJobs.length) {
+    el.innerHTML = '<div style="padding:40px 16px;text-align:center;color:#94a3b8;font-size:13px">暂无任务</div>';
+    return;
+  }
+  el.innerHTML = svJobs.map(j => `
+    <div class="sv-item ${j.id === svSelectedId ? 'active' : ''}" onclick="svSelect('${j.id}')">
+      <div class="sv-item-name">${j.execute_id || j.id}</div>
+      <div class="sv-item-meta">
+        <span class="badge badge-${j.status}">${svStatusLabel(j.status)}</span>
+        <span style="font-size:11px;color:#94a3b8">${svFmtTime(j.created_at)}</span>
+      </div>
+    </div>`).join('');
+}
+
+function svSelect(id) {
+  svSelectedId = id;
+  svRenderList();
+  document.getElementById('sv-placeholder').style.display = 'none';
+  document.getElementById('sv-new-form').style.display = 'none';
+  document.getElementById('sv-job-detail').style.display = 'block';
+  svUpdateDetail(id);
+  svStartPolling();
+}
+
+function svUpdateDetail(id) {
+  const job = svJobs.find(j => j.id === id);
+  if (!job) return;
+  document.getElementById('sv-d-name').textContent = job.execute_id || job.id;
+  document.getElementById('sv-d-id').textContent = job.id;
+  document.getElementById('sv-d-execute-id').textContent = job.execute_id || '-';
+  document.getElementById('sv-d-status').innerHTML = `<span class="badge badge-${job.status}">${svStatusLabel(job.status)}</span>`;
+
+  const pw = document.getElementById('sv-d-progress-wrap');
+  const pct = svParseProgress(job.progress);
+  if (job.status === 'processing' || job.status === 'pending') {
+    pw.style.display = 'block';
+    document.getElementById('sv-d-fill').style.width = pct + '%';
+    document.getElementById('sv-d-progress-text').textContent = job.progress || '等待处理...';
+  } else if (job.status === 'completed') {
+    pw.style.display = 'block';
+    document.getElementById('sv-d-fill').style.width = '100%';
+    document.getElementById('sv-d-progress-text').textContent = '处理完成';
+  } else {
+    pw.style.display = 'none';
+  }
+
+  const errEl = document.getElementById('sv-d-error');
+  if (job.status === 'error' && job.error) {
+    errEl.style.display = 'block'; errEl.textContent = job.error;
+  } else { errEl.style.display = 'none'; }
+
+  const actions = document.getElementById('sv-d-actions');
+  if (job.status === 'completed') {
+    let btns = `<a class="sv-btn sv-btn-primary" href="${SV_API}/${job.id}/video" download>⬇ 下载视频</a>`;
+    if (job.playlist_url) {
+      btns += `<button class="sv-btn sv-btn-play" onclick="window.open('${job.playlist_url}','_blank')">▶ 播放 HLS</button>`;
+    }
+    actions.innerHTML = btns;
+  } else { actions.innerHTML = ''; }
+}
+
+function svShowForm() {
+  svSelectedId = null;
+  svRenderList();
+  document.getElementById('sv-placeholder').style.display = 'none';
+  document.getElementById('sv-job-detail').style.display = 'none';
+  document.getElementById('sv-new-form').style.display = 'block';
+  document.getElementById('sv-submit-msg').textContent = '';
+}
+
+async function svSubmit() {
+  const name  = document.getElementById('sv-f-name').value.trim();
+  const audio = document.getElementById('sv-f-audio').files[0];
+  const txt   = document.getElementById('sv-f-txt').files[0];
+  const msg   = document.getElementById('sv-submit-msg');
+  const btn   = document.getElementById('sv-btn-submit');
+  if (!audio || !txt) { msg.style.color='#dc2626'; msg.textContent='请选择音频和字幕文件'; return; }
+  btn.disabled = true; btn.textContent = '上传中...'; msg.textContent = '';
+  const fd = new FormData();
+  fd.append('audio', audio); fd.append('txt', txt);
+  if (name) fd.append('name', name);
+  try {
+    const res  = await fetch(`${SV_API}/upload-and-async`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '提交失败');
+    msg.style.color = '#16a34a'; msg.textContent = `任务已创建`;
+    btn.disabled = false; btn.textContent = '开始生成';
+    document.getElementById('sv-f-name').value = '';
+    document.getElementById('sv-f-audio').value = '';
+    document.getElementById('sv-f-txt').value = '';
+    await svLoadList();
+    svSelect(data.jobId);
+    svStartPolling();
+  } catch(e) {
+    msg.style.color = '#dc2626'; msg.textContent = e.message;
+    btn.disabled = false; btn.textContent = '开始生成';
+  }
+}
+
+function svStatusLabel(s) {
+  return { pending:'等待', processing:'处理中', completed:'已完成', error:'失败' }[s] || s;
+}
+function svFmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function svParseProgress(p) {
+  if (!p) return 0;
+  const m = p.match(/\((\d+\.?\d*)%\)/);
+  if (m) return parseFloat(m[1]);
+  if (p.includes('[INFO]')) return 2;
+  if (p.includes('[完成]')) return 100;
+  return 0;
+}
+
+// ── 初始化：默认显示 Claude tab ──
+// (claude-tasks.js DOMContentLoaded 先绑定好 btnNewTask/btnRefresh，这里无需再切)
+
+</script>

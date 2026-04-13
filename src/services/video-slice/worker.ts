@@ -48,6 +48,7 @@ async function processNext(): Promise<void> {
 
     job.status = 'done';
     if (job.taskId) updateTask(job.taskId, { playlistUrl: job.playlistUrl });
+    if (job.onDone) job.onDone(job.playlistUrl);
     console.log(`[Slice Worker] job=${job.id} done playlist=${job.playlistUrl}`);
     await postCallback(job);
   } catch (err) {
@@ -103,7 +104,7 @@ function buildPlaylistUrl(prefix: string): string {
   return `${config.hlsPublicBaseUrl}${config.hlsUrlPathPrefix}/${prefix}/index.m3u8`;
 }
 
-function buildMinioPrefix(jobId: string, date: string, name?: string): string {
+export function buildMinioPrefix(jobId: string, date: string, name?: string): string {
   return name ? `${date}/${name}/${jobId}` : `${date}/${jobId}`;
 }
 

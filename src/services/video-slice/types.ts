@@ -15,6 +15,8 @@ export interface CreateJobRequest {
   callbackSecret?: string;
   /** 原始视频引用地址（HTTP URL），透传回下游 */
   videoUrl?: string;
+  /** 切片完成后的回调，用于外部服务回写自己的状态（避免循环依赖） */
+  onDone?: (playlistUrl?: string) => void;
 }
 
 export type JobStatus = 'pending' | 'running' | 'done' | 'fail';
