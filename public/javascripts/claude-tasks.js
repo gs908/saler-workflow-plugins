@@ -388,12 +388,13 @@ function processSSELines(taskId, chunk) {
       }
       break;
 
+    case 'tool_use':
     case 'tool_start':
-      appendToolEvent(taskId, '调用工具: ' + data.name, '');
+      appendToolEvent(taskId, '调用工具: ' + data.name, JSON.stringify(data.input || '').substring(0, 80));
       break;
 
     case 'tool_result':
-      appendToolEvent(taskId, '工具结果', extractToolResultContent(data.content));
+      appendToolEvent(taskId, '工具结果', '');
       break;
 
     case 'status':
@@ -405,8 +406,11 @@ function processSSELines(taskId, chunk) {
       appendToolEvent(taskId, '错误: ' + (data.error || '未知错误'), '');
       break;
 
-    case 'tool_use':
     case 'result':
+      if (data.result) {
+        output.text += '\n\n---\n\n' + data.result;
+        renderOutput(taskId);
+      }
       break;
 
     case 'done':
@@ -414,15 +418,6 @@ function processSSELines(taskId, chunk) {
       loadTasks();
       break;
   }
-}
-
-function extractToolResultContent(content) {
-  if (typeof content === 'string') return content.substring(0, 120);
-  if (Array.isArray(content) && content.length > 0) {
-    var first = content[0];
-    if (first && typeof first.text === 'string') return first.text.substring(0, 120);
-  }
-  return '';
 }
 
 function appendToolEvent(taskId, title, detail) {
@@ -434,7 +429,6 @@ function appendToolEvent(taskId, title, detail) {
   div.innerHTML = '<span class="ct-tool-event-icon">⚙</span><strong>' +
     escapeHtml(title) + '</strong>' +
     (detail ? ' <span style="opacity:0.7">' + escapeHtml(detail) + '</span>' : '');
-
   container.appendChild(div);
   scrollOutputToBottom();
 }
@@ -461,6 +455,9 @@ function renderOutput(taskId) {
 
   var container = document.getElementById('outputContent');
 
+  // 先找到所有 tool-event 元素
+  var toolEvents = container.querySelectorAll('.ct-tool-event');
+
   // 找到或创建 Markdown 容器
   var mdContainer = container.querySelector('.ct-md-content');
   if (!mdContainer) {
@@ -474,6 +471,11 @@ function renderOutput(taskId) {
     mdContainer.innerHTML = marked.parse(output.text);
   } else {
     mdContainer.innerHTML = '<pre>' + escapeHtml(output.text) + '</pre>';
+  }
+
+  // 把 tool events 移到最前面（保持顺序）
+  for (var i = toolEvents.length - 1; i >= 0; i--) {
+    container.insertBefore(toolEvents[i], container.firstChild);
   }
 
   scrollOutputToBottom();
@@ -548,23 +550,16 @@ function showTaskDetail(taskId) {
   if (output) {
     output.events.forEach(function (evt) {
       if (evt.event === 'text' || evt.event === 'text_delta' || evt.event === 'result') return;
-      if (evt.event === 'tool_use') return; // tool_start 已显示，跳过
-      if (evt.event === 'init' || evt.event === 'tool_start' ||
-          evt.event === 'tool_result' || evt.event === 'status' ||
-          evt.event === 'error' || evt.event === 'done') {
+      if (evt.event === 'init' || evt.event === 'tool_use' || evt.event === 'tool_start' ||
+          evt.event === 'status' || evt.event === 'error' || evt.event === 'done') {
         var title = evt.event;
-        var detail = '';
         if (evt.data && evt.data.name) title = '调用工具: ' + evt.data.name;
         if (evt.data && evt.data.status) title = '状态: ' + evt.data.status;
         if (evt.data && evt.data.error) title = '错误: ' + evt.data.error;
-        if (evt.event === 'tool_result') {
-          title = '工具结果';
-          detail = extractToolResultContent(evt.data.content);
-        }
-        appendToolEvent(taskId, title, detail);
+        appendToolEvent(taskId, title, '');
       }
     });
-    if (output.text) renderOutput(taskId);
+    renderOutput(taskId);
   }
 
   // 如果没有活跃的 SSE 连接（外部任务或页面刷新后的旧任务），主动订阅 /stream
