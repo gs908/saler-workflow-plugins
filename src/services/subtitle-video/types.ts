@@ -2,6 +2,7 @@ export type SubtitleJobStatus = 'pending' | 'processing' | 'completed' | 'error'
 
 export interface SubtitleJobRow {
   id:           string;
+  name:         string | null;
   execute_id:   string | null;
   status:       SubtitleJobStatus;
   audio_path:   string;

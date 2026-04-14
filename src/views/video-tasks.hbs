@@ -349,7 +349,7 @@ function svRenderList() {
   }
   el.innerHTML = svJobs.map(j => `
     <div class="sv-item ${j.id === svSelectedId ? 'active' : ''}" onclick="svSelect('${j.id}')">
-      <div class="sv-item-name">${j.execute_id || j.id}</div>
+      <div class="sv-item-name">${j.name || j.execute_id || j.id}</div>
       <div class="sv-item-meta">
         <span class="badge badge-${j.status}">${svStatusLabel(j.status)}</span>
         <span style="font-size:11px;color:#94a3b8">${svFmtTime(j.created_at)}</span>
@@ -370,7 +370,7 @@ function svSelect(id) {
 function svUpdateDetail(id) {
   const job = svJobs.find(j => j.id === id);
   if (!job) return;
-  document.getElementById('sv-d-name').textContent = job.execute_id || job.id;
+  document.getElementById('sv-d-name').textContent = job.name || job.execute_id || job.id;
   document.getElementById('sv-d-id').textContent = job.id;
   document.getElementById('sv-d-execute-id').textContent = job.execute_id || '-';
   document.getElementById('sv-d-status').innerHTML = `<span class="badge badge-${job.status}">${svStatusLabel(job.status)}</span>`;

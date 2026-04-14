@@ -22,6 +22,7 @@ export function enqueue(params: CreateSubtitleJobParams): string {
 
   const row: SubtitleJobRow = {
     id,
+    name:         params.name         ?? null,
     execute_id:   params.execute_id   ?? null,
     status:       'pending',
     audio_path:   params.audio_path,

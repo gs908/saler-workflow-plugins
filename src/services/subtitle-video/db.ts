@@ -8,6 +8,7 @@ import type { SubtitleJobRow } from './types';
 db.exec(`
   CREATE TABLE IF NOT EXISTS subtitle_video_jobs (
     id           TEXT    PRIMARY KEY,
+    name         TEXT,
     execute_id   TEXT,
     status       TEXT    NOT NULL DEFAULT 'pending',
     audio_path   TEXT    NOT NULL,
@@ -23,11 +24,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_subtitle_jobs_created ON subtitle_video_jobs(created_at DESC);
 `);
 
+// 旧表迁移：补加 name 列（CREATE TABLE IF NOT EXISTS 不会重建，需单独 ALTER）
+try { db.exec(`ALTER TABLE subtitle_video_jobs ADD COLUMN name TEXT`); } catch {}
+
 const stmtInsert = db.prepare<SubtitleJobRow>(`
   INSERT INTO subtitle_video_jobs
-    (id, execute_id, status, audio_path, txt_path, video_path, playlist_url, callback_url, progress, error, created_at, updated_at)
+    (id, name, execute_id, status, audio_path, txt_path, video_path, playlist_url, callback_url, progress, error, created_at, updated_at)
   VALUES
-    (@id, @execute_id, @status, @audio_path, @txt_path, @video_path, @playlist_url, @callback_url, @progress, @error, @created_at, @updated_at)
+    (@id, @name, @execute_id, @status, @audio_path, @txt_path, @video_path, @playlist_url, @callback_url, @progress, @error, @created_at, @updated_at)
 `);
 
 const stmtUpdate = db.prepare<{ id: string; status: string | null; video_path: string | null; playlist_url: string | null; progress: string | null; error: string | null; updated_at: number }>(`
