@@ -100,6 +100,7 @@ router.get('/:jobId/status', (req, res) => {
 
 /**
  * GET /saler-plugins/api/subtitle-video/:jobId/video
+ * 统一走后端代理返回，支持浏览器直接下载（local 和 MinIO 模式均适用）
  */
 router.get('/:jobId/video', (req, res) => {
   const job = getJob(req.params.jobId);
@@ -108,38 +109,28 @@ router.get('/:jobId/video', (req, res) => {
     return;
   }
 
-  // MinIO 模式：video_path 是 HTTP URL，直接重定向
+  const filename = `${job.name || job.id}.mp4`;
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+  res.setHeader('Content-Type', 'video/mp4');
+
+  // MinIO 模式：video_path 是 HTTP URL，代理返回
   if (job.video_path.startsWith('http')) {
-    res.redirect(job.video_path);
+    const client = job.video_path.startsWith('https') ? require('https') : require('http');
+    client.get(job.video_path, (upstream: any) => {
+      upstream.pipe(res);
+    }).on('error', () => {
+      res.status(502).json({ error: 'Failed to fetch video from storage' });
+    });
     return;
   }
 
+  // local 模式：本地文件流式返回
   if (!fs.existsSync(job.video_path)) {
     res.status(404).json({ error: 'Video file not found on disk' });
     return;
   }
 
-  const stat  = fs.statSync(job.video_path);
-  const range = req.headers.range;
-
-  if (range) {
-    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(startStr, 10);
-    const end   = endStr ? parseInt(endStr, 10) : stat.size - 1;
-    res.writeHead(206, {
-      'Content-Range':  `bytes ${start}-${end}/${stat.size}`,
-      'Accept-Ranges':  'bytes',
-      'Content-Length': end - start + 1,
-      'Content-Type':   'video/mp4',
-    });
-    fs.createReadStream(job.video_path, { start, end }).pipe(res);
-  } else {
-    res.writeHead(200, {
-      'Content-Length': stat.size,
-      'Content-Type':   'video/mp4',
-    });
-    fs.createReadStream(job.video_path).pipe(res);
-  }
+  fs.createReadStream(job.video_path).pipe(res);
 });
 
 export default router;

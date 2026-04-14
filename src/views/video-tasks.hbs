@@ -397,8 +397,8 @@ function svUpdateDetail(id) {
   const actions = document.getElementById('sv-d-actions');
   if (job.status === 'completed') {
     let btns = `<a class="sv-btn sv-btn-primary" href="${SV_API}/${job.id}/video" download>⬇ 下载视频</a>`;
-    if (job.playlist_url) {
-      btns += `<button class="sv-btn sv-btn-play" onclick="window.open('${job.playlist_url}','_blank')">▶ 播放 HLS</button>`;
+    if (job.playlist_url || job.video_url) {
+      btns += `<button class="sv-btn sv-btn-play" onclick="svOpenVideoModal('${job.playlist_url || ''}','${job.video_url || ''}')">▶ 播放视频</button>`;
     }
     actions.innerHTML = btns;
   } else { actions.innerHTML = ''; }
@@ -457,6 +457,14 @@ function svParseProgress(p) {
   if (p.includes('[INFO]')) return 2;
   if (p.includes('[完成]')) return 100;
   return 0;
+}
+
+// ── 字幕视频播放（复用 Claude 任务的视频弹框）──
+function svOpenVideoModal(playlistUrl, videoUrl) {
+  var playBtn = document.getElementById('btnPlayVideo');
+  playBtn._playlistUrl = playlistUrl || null;
+  playBtn._videoUrl    = videoUrl    || null;
+  openVideoModal();
 }
 
 // ── 初始化：默认显示 Claude tab ──
