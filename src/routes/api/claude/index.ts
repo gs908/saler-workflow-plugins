@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { taskManager } from '../../../services/claude/task-manager';
 import { executeTask, subscribe, unsubscribeAll, resumeTask } from '../../../services/claude/claude-service';
+import { resetTaskForRetry, resetTaskForTweak } from '../../../services/claude/db';
 import { upload, getUploadedFilePaths } from '../../../services/claude/file-handler';
 import { getTask, getEventsByTaskId } from '../../../services/claude/db';
 
@@ -264,6 +265,12 @@ router.post('/:taskId/resume', async (req: Request, res: Response) => {
 /**
  * POST /:taskId/retry - 用原始参数重新创建并执行（无 sessionId 时使用）
  */
+/**
+ * POST /:taskId/retry - 原地重跑
+ * body: { prompt?: string, mode: 'fresh' | 'tweak' }
+ *   fresh - 清空工作区 + 清 sessionId，全新开始
+ *   tweak - 保留工作区 + 保留 sessionId，基于上次结果微调
+ */
 router.post('/:taskId/retry', (req: Request, res: Response) => {
   const taskId = req.params.taskId as string;
   const original = taskManager.get(taskId);
@@ -273,23 +280,35 @@ router.post('/:taskId/retry', (req: Request, res: Response) => {
     return;
   }
   if (original.status === 'running' || original.status === 'pending') {
-    res.status(400).json({ error: `原任务仍在运行中 (${original.status})，无需重试` });
+    res.status(400).json({ error: `任务正在运行中 (${original.status})，请先取消再重跑` });
     return;
   }
 
-  const task = taskManager.create({
-    name:          original.name,
-    prompt:        original.prompt,
-    skill:         original.skill,
-    workDir:       original.workDir,
-    model:         original.model,
-    pipelineId:    original.pipelineId,
-    callbackUrl:   original.callbackUrl,
-    uploadedFiles: original.uploadedFiles,
-  });
+  const newPrompt = typeof req.body?.prompt === 'string' && req.body.prompt.trim()
+    ? req.body.prompt.trim()
+    : undefined;
+  const mode = req.body?.mode === 'tweak' ? 'tweak' : 'fresh';
 
-  executeTask(task).catch(() => {});
-  res.json({ success: true, newTaskId: task.id, status: task.status, streamUrl: `/saler-plugins/api/claude/${task.id}/stream` });
+  if (mode === 'fresh') {
+    // 清空工作区
+    if (original.workDir && fs.existsSync(original.workDir)) {
+      fs.rmSync(original.workDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(original.workDir, { recursive: true });
+    resetTaskForRetry(taskId, newPrompt);
+  } else {
+    // 保留工作区，只重置状态
+    resetTaskForTweak(taskId, newPrompt);
+  }
+
+  // 替换 AbortController，读取最新 DB 数据
+  const ac = taskManager.resetForResume(taskId);
+  const task = taskManager.get(taskId)!;
+  const resumeSessionId = mode === 'tweak' ? (task.sessionId ?? undefined) : undefined;
+
+  executeTask({ ...task, abortController: ac, status: 'pending' }, resumeSessionId).catch(() => {});
+
+  res.json({ success: true, taskId, streamUrl: `/saler-plugins/api/claude/${taskId}/stream` });
 });
 
 /**

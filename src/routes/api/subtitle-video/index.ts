@@ -1,5 +1,7 @@
 import { Router }  from 'express';
 import fs           from 'node:fs';
+import http         from 'node:http';
+import https        from 'node:https';
 import os           from 'node:os';
 import path         from 'node:path';
 import multer       from 'multer';
@@ -115,22 +117,27 @@ router.get('/:jobId/video', (req, res) => {
 
   // MinIO 模式：video_path 是 HTTP URL，代理返回
   if (job.video_path.startsWith('http')) {
-    const client = job.video_path.startsWith('https') ? require('https') : require('http');
-    client.get(job.video_path, (upstream: any) => {
+    const client = job.video_path.startsWith('https') ? https : http;
+    client.get(job.video_path, (upstream) => {
+      if (upstream.headers['content-length']) {
+        res.setHeader('Content-Length', upstream.headers['content-length']);
+      }
       upstream.pipe(res);
     }).on('error', () => {
-      res.status(502).json({ error: 'Failed to fetch video from storage' });
+      if (!res.headersSent) res.status(502).json({ error: 'Failed to fetch video from storage' });
+      else res.destroy();
     });
     return;
   }
 
   // local 模式：本地文件流式返回
-  if (!fs.existsSync(job.video_path)) {
-    res.status(404).json({ error: 'Video file not found on disk' });
-    return;
-  }
-
-  fs.createReadStream(job.video_path).pipe(res);
+  fs.createReadStream(job.video_path)
+    .on('error', (err: NodeJS.ErrnoException) => {
+      if (!res.headersSent) {
+        res.status(err.code === 'ENOENT' ? 404 : 500).json({ error: 'Video file not found on disk' });
+      }
+    })
+    .pipe(res);
 });
 
 export default router;

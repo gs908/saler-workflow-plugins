@@ -269,29 +269,63 @@ function handleResumeTask() {
     });
 }
 
+var _retryMode = 'fresh';
+
 function handleRetryTask() {
   var taskId = state.currentTaskId;
   if (!taskId) return;
 
-  if (!confirm('将用相同参数重新创建并执行任务，确定吗？')) return;
+  var task = state.tasks.find(function (t) { return t.id === taskId; });
+  document.getElementById('retryPromptInput').value = task ? (task.prompt || '') : '';
+  setRetryMode('fresh');
+  document.getElementById('retryModalOverlay').style.display = 'flex';
+}
 
-  fetch(API_BASE + '/' + taskId + '/retry', { method: 'POST' })
+function setRetryMode(mode) {
+  _retryMode = mode;
+  var freshBtn = document.getElementById('retryModeFresh');
+  var tweakBtn = document.getElementById('retryModeTweak');
+  if (mode === 'fresh') {
+    freshBtn.style.borderColor = '#2563eb'; freshBtn.style.background = '#eff6ff'; freshBtn.style.color = '#1d4ed8';
+    tweakBtn.style.borderColor = '#e2e8f0'; tweakBtn.style.background = '#f8faff'; tweakBtn.style.color = '#475569';
+  } else {
+    tweakBtn.style.borderColor = '#2563eb'; tweakBtn.style.background = '#eff6ff'; tweakBtn.style.color = '#1d4ed8';
+    freshBtn.style.borderColor = '#e2e8f0'; freshBtn.style.background = '#f8faff'; freshBtn.style.color = '#475569';
+  }
+}
+
+function closeRetryModal() {
+  document.getElementById('retryModalOverlay').style.display = 'none';
+}
+
+function submitRetry() {
+  var taskId = state.currentTaskId;
+  if (!taskId) return;
+
+  var prompt = document.getElementById('retryPromptInput').value.trim();
+  closeRetryModal();
+
+  fetch(API_BASE + '/' + taskId + '/retry', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: prompt, mode: _retryMode }),
+  })
     .then(function (res) { return res.json(); })
     .then(function (data) {
       if (data.success) {
-        showToast('已创建新任务，执行中…', 'info');
-        loadTasks();
-        // 切换到新任务
-        if (data.newTaskId) {
-          state.currentTaskId = data.newTaskId;
-          subscribeToStream(data.newTaskId);
+        showToast(_retryMode === 'tweak' ? '微调执行中…' : '全新执行中…', 'info');
+        if (state.taskOutputs[taskId]) {
+          state.taskOutputs[taskId] = { text: '', events: [] };
         }
+        document.getElementById('outputContent').innerHTML = '';
+        loadTasks();
+        subscribeToStream(taskId);
       } else {
-        showToast(data.error || '重新执行失败', 'error');
+        showToast(data.error || '执行失败', 'error');
       }
     })
     .catch(function (err) {
-      showToast('重新执行失败: ' + err.message, 'error');
+      showToast('执行失败: ' + err.message, 'error');
     });
 }
 
@@ -635,10 +669,10 @@ function fillTaskInfo(task) {
     var canResume = (task.status === 'cancelled' || task.status === 'error') && !!task.sessionId;
     resumeBtn.style.display = canResume ? 'inline-flex' : 'none';
   }
-  // 重新执行按钮：已取消或报错，且没有 sessionId 时显示
+  // 重新跑按钮：completed / error / cancelled 均显示
   var retryBtn = document.getElementById('btnRetryTask');
   if (retryBtn) {
-    var canRetry = (task.status === 'cancelled' || task.status === 'error') && !task.sessionId;
+    var canRetry = task.status === 'completed' || task.status === 'error' || task.status === 'cancelled';
     retryBtn.style.display = canRetry ? 'inline-flex' : 'none';
   }
 }

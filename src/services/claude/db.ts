@@ -160,6 +160,28 @@ export function resetTaskForResume(id: string): void {
   stmtResetForResume.run({ id });
 }
 
+/** 重跑：clearSession=1 清空 sessionId（全新开始），=0 保留（微调） */
+const stmtReset = db.prepare<{ id: string; prompt: string | null; clearSession: 0 | 1 }>(`
+  UPDATE tasks SET
+    status      = 'pending',
+    endTime     = NULL,
+    error       = NULL,
+    resultText  = NULL,
+    sessionId   = CASE WHEN @clearSession THEN NULL ELSE sessionId END,
+    videoPath   = NULL,
+    playlistUrl = NULL,
+    prompt      = COALESCE(@prompt, prompt)
+  WHERE id = @id
+`);
+
+export function resetTaskForRetry(id: string, newPrompt?: string): void {
+  stmtReset.run({ id, prompt: newPrompt ?? null, clearSession: 1 });
+}
+
+export function resetTaskForTweak(id: string, newPrompt?: string): void {
+  stmtReset.run({ id, prompt: newPrompt ?? null, clearSession: 0 });
+}
+
 const stmtGetTask = db.prepare<{ id: string }>('SELECT * FROM tasks WHERE id = @id');
 
 export function getTask(id: string): TaskRow | undefined {

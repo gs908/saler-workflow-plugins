@@ -281,6 +281,32 @@
   </div>
 </div>
 
+<!-- 重新执行弹窗 -->
+<div id="retryModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:10px;padding:24px;width:520px;max-width:90vw;">
+    <div style="font-size:15px;font-weight:600;margin-bottom:16px;color:#1e293b">重新执行</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="retryModeFresh" onclick="setRetryMode('fresh')"
+        style="flex:1;padding:10px;border-radius:6px;border:2px solid #2563eb;background:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:600;cursor:pointer;">
+        🔄 全新开始<br><span style="font-weight:400;font-size:12px">清空工作区，完全重来</span>
+      </button>
+      <button id="retryModeTweak" onclick="setRetryMode('tweak')"
+        style="flex:1;padding:10px;border-radius:6px;border:2px solid #e2e8f0;background:#f8faff;color:#475569;font-size:13px;font-weight:600;cursor:pointer;">
+        ✏️ 微调<br><span style="font-weight:400;font-size:12px">保留上次结果，局部调整</span>
+      </button>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Prompt</label>
+      <textarea id="retryPromptInput" rows="5"
+        style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button onclick="closeRetryModal()" style="padding:8px 18px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;font-size:13px;cursor:pointer;">取消</button>
+      <button onclick="submitRetry()" style="padding:8px 18px;border-radius:6px;border:none;background:#2563eb;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">开始执行</button>
+    </div>
+  </div>
+</div>
+
 <!-- 视频播放弹框 -->
 <div id="videoModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
   <div style="background:#000;border-radius:10px;padding:16px;width:80vw;max-width:900px;position:relative;">
