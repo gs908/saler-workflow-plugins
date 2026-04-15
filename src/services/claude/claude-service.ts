@@ -174,15 +174,10 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
 
       await fs.promises.copyFile(originalVideoPath, targetVideoPath);
 
-      // 根据存储类型设置 videoPath
-      if (config.storageType === 'minio') {
-        // MinIO 模式：存储 MinIO URL（切片服务会上传，URL 格式为 {prefix}/origin.mp4）
-        resultData.path = buildMinioUrl(`${minioPrefix}/origin.mp4`);
-      } else {
-        // 本地模式：存储本地文件路径
-        resultData.path = targetVideoPath;
-      }
-      console.log(`[Claude Task ${task.id}] 视频已复制到统一路径: ${resultData.path}`);
+      // 无论哪种模式，都传本地路径给切片服务
+      // MinIO 模式下，切片服务会在完成后上传整个目录
+      resultData.path = targetVideoPath;
+      console.log(`[Claude Task ${task.id}] 视频已复制到统一路径: ${targetVideoPath}`);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -80,11 +80,13 @@ async function processJob(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     updateJob(job.id, { status: 'error', error: msg });
-    fs.rmSync(tmpDir,    { recursive: true, force: true });
-    fs.rmSync(videoDir,  { recursive: true, force: true });
+    // 失败时保留本地文件用于调试，只清理临时配置目录
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    console.error(`[Subtitle Worker] job=${job.id} failed, preserving videoDir for debug: ${videoDir}`);
     await postFailCallback(job, msg);
     return;
   }
+  // 成功后清理临时配置目录（视频目录保留给切片服务处理）
   fs.rmSync(tmpDir, { recursive: true, force: true });
 
   // origin.mp4 与 HLS 切片同目录，uploadDir/rmSync 会一并处理

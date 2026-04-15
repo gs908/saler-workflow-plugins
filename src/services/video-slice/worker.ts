@@ -40,14 +40,18 @@ async function processNext(): Promise<void> {
       const prefix = buildMinioPrefix(job.id, job.hlsDate, job.name);
       await uploadDir(outputDir, prefix);
       job.playlistUrl = buildMinioUrl(`${prefix}/index.m3u8`);
+      job.videoUrl = buildMinioUrl(`${prefix}/origin.mp4`);
       fs.rmSync(outputDir, { recursive: true, force: true });
       console.log(`[Slice Worker] job=${job.id} uploaded to MinIO, local temp removed`);
+      // 更新 videoPath 和 playlistUrl 为 MinIO URL
+      if (job.taskId) updateTask(job.taskId, { playlistUrl: job.playlistUrl, videoPath: job.videoUrl });
     } else {
       job.playlistUrl = buildPlaylistUrl(buildMinioPrefix(job.id, job.hlsDate, job.name));
+      // 本地模式 videoPath 已经是正确的本地路径，无需更新
+      if (job.taskId) updateTask(job.taskId, { playlistUrl: job.playlistUrl });
     }
 
     job.status = 'done';
-    if (job.taskId) updateTask(job.taskId, { playlistUrl: job.playlistUrl });
     if (job.onDone) job.onDone(job.playlistUrl);
     console.log(`[Slice Worker] job=${job.id} done playlist=${job.playlistUrl}`);
     await postCallback(job);
@@ -55,9 +59,7 @@ async function processNext(): Promise<void> {
     job.status = 'fail';
     job.error = err instanceof Error ? err.message : String(err);
     console.error(`[Slice Worker] job=${job.id} failed: ${job.error}`);
-    if (config.storageType === 'minio') {
-      fs.rmSync(outputDir, { recursive: true, force: true });
-    }
+    // 失败时保留本地文件用于调试，不删除
     await postCallback(job);
   } finally {
     processNext();
@@ -139,7 +141,8 @@ async function postCallback(job: Job): Promise<void> {
     outcome:    'success', // 视频本身成功，切片失败属于降级，不影响整体结果
   };
 
-  body.path = job.source;
+  // MinIO 模式：path 用 MinIO URL，本地模式：path 用本地路径
+  body.path = config.storageType === 'minio' && job.videoUrl ? job.videoUrl : job.source;
   if (job.videoUrl) body.video_url = job.videoUrl;
   if (job.status === 'done') {
     body.playlist_url = job.playlistUrl;
