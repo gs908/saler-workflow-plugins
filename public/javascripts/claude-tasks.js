@@ -710,9 +710,10 @@ function formatTime(timestamp) {
 var _hlsInstance = null;
 
 function openVideoModal() {
-  var playBtn  = document.getElementById('btnPlayVideo');
-  var videoEl  = document.getElementById('modalVideo');
-  var overlay  = document.getElementById('videoModalOverlay');
+  var playBtn      = document.getElementById('btnPlayVideo');
+  var videoEl      = document.getElementById('modalVideo');
+  var overlay      = document.getElementById('videoModalOverlay');
+  var downloadLink = document.getElementById('modalVideoDownload');
 
   // 销毁上一次的 hls 实例
   if (_hlsInstance) { _hlsInstance.destroy(); _hlsInstance = null; }
@@ -728,6 +729,17 @@ function openVideoModal() {
     }
   } else if (playBtn._videoUrl) {
     videoEl.src = playBtn._videoUrl;
+  }
+
+  // 下载链接指向 /video 接口（流式返回 MP4）
+  if (downloadLink) {
+    var taskId = state.currentTaskId;
+    if (taskId) {
+      downloadLink.href = API_BASE + '/' + taskId + '/video';
+      downloadLink.style.display = '';
+    } else {
+      downloadLink.style.display = 'none';
+    }
   }
 
   overlay.style.display = 'flex';

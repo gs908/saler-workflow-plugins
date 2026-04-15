@@ -322,6 +322,8 @@ router.get('/:taskId/video', (req: Request, res: Response) => {
     return;
   }
   const stat = fs.statSync(task.videoPath);
+  const filename = `${task.name || taskId}.mp4`;
+  const disposition = `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`;
   const range = req.headers.range;
   if (range) {
     const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
@@ -332,6 +334,7 @@ router.get('/:taskId/video', (req: Request, res: Response) => {
       'Accept-Ranges': 'bytes',
       'Content-Length': end - start + 1,
       'Content-Type': 'video/mp4',
+      'Content-Disposition': disposition,
     });
     fs.createReadStream(task.videoPath, { start, end }).pipe(res);
   } else {
@@ -339,6 +342,7 @@ router.get('/:taskId/video', (req: Request, res: Response) => {
       'Content-Length': stat.size,
       'Content-Type': 'video/mp4',
       'Accept-Ranges': 'bytes',
+      'Content-Disposition': disposition,
     });
     fs.createReadStream(task.videoPath).pipe(res);
   }
