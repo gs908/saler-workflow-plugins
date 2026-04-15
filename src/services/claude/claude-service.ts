@@ -6,7 +6,9 @@ import * as os from 'os';
 import axios from 'axios';
 import { taskManager, TaskInfo } from './task-manager';
 import { insertEvent, updateTask } from './db';
-import { enqueue } from '../video-slice/worker';
+import { enqueue, buildMinioPrefix } from '../video-slice/worker';
+import { config } from '../video-slice/config';
+import { buildMinioUrl } from '../video-slice/minio-client';
 import type { Job } from '../video-slice/types';
 
 const DEFAULT_ALLOWED_TOOLS = [
@@ -159,6 +161,29 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
       hasResult:  true,
     };
     console.log(`[Claude Task ${task.id}] result.json 读取成功`);
+
+    // 复制视频到统一路径（与切片服务相同的目录结构）
+    if (resultData.outcome === 'success' && resultData.path) {
+      const originalVideoPath = resultData.path;
+      const today = new Date().toISOString().slice(0, 10);
+      const minioPrefix = buildMinioPrefix(task.id, today, task.name);
+      const targetDir = path.join(config.hlsOutputDir, ...minioPrefix.split('/'));
+
+      fs.mkdirSync(targetDir, { recursive: true });
+      const targetVideoPath = path.join(targetDir, 'origin.mp4');
+
+      await fs.promises.copyFile(originalVideoPath, targetVideoPath);
+
+      // 根据存储类型设置 videoPath
+      if (config.storageType === 'minio') {
+        // MinIO 模式：存储 MinIO URL（切片服务会上传，URL 格式为 {prefix}/origin.mp4）
+        resultData.path = buildMinioUrl(`${minioPrefix}/origin.mp4`);
+      } else {
+        // 本地模式：存储本地文件路径
+        resultData.path = targetVideoPath;
+      }
+      console.log(`[Claude Task ${task.id}] 视频已复制到统一路径: ${resultData.path}`);
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`[Claude Task ${task.id}] result.json 读取失败 (${msg})，将回调基本状态信息，outcome=fail`);

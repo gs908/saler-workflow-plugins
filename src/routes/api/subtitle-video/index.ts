@@ -1,12 +1,11 @@
 import { Router }  from 'express';
 import fs           from 'node:fs';
-import http         from 'node:http';
-import https        from 'node:https';
 import os           from 'node:os';
 import path         from 'node:path';
 import multer       from 'multer';
 import { enqueue, getJob } from '../../../services/subtitle-video/worker';
-import { listJobs }        from '../../../services/subtitle-video/db';
+import { listJobs, deleteJob } from '../../../services/subtitle-video/db';
+import { proxyHttpVideo } from '../../../utils/streaming-proxy';
 
 const router = Router();
 
@@ -81,6 +80,30 @@ router.get('/list', (_req, res) => {
 });
 
 /**
+ * DELETE /saler-plugins/api/subtitle-video/:jobId
+ */
+router.delete('/:jobId', (req, res) => {
+  const job = getJob(req.params.jobId);
+  if (!job) {
+    res.status(404).json({ error: 'Job not found' });
+    return;
+  }
+
+  deleteJob(job.id);
+
+  // 只清理前端上传到临时目录的缓存文件，上游传入的路径和结果文件均不删除
+  const tmpUploadDir = path.join(os.tmpdir(), 'subtitle-video-uploads');
+  [job.audio_path, job.txt_path].forEach(p => {
+    if (p && p.startsWith(tmpUploadDir)) {
+      try { fs.rmSync(p, { force: true }); }
+      catch (err) { console.warn(`[SubtitleVideo] Failed to delete temp file ${p}:`, err); }
+    }
+  });
+
+  res.json({ success: true, jobId: job.id });
+});
+
+/**
  * GET /saler-plugins/api/subtitle-video/:jobId/status
  */
 router.get('/:jobId/status', (req, res) => {
@@ -111,21 +134,10 @@ router.get('/:jobId/video', (req, res) => {
     return;
   }
 
-  const filename = `${job.name || job.id}.mp4`;
-  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
-  res.setHeader('Content-Type', 'video/mp4');
-
   // MinIO 模式：video_path 是 HTTP URL，代理返回
   if (job.video_path.startsWith('http')) {
-    const client = job.video_path.startsWith('https') ? https : http;
-    client.get(job.video_path, (upstream) => {
-      if (upstream.headers['content-length']) {
-        res.setHeader('Content-Length', upstream.headers['content-length']);
-      }
-      upstream.pipe(res);
-    }).on('error', () => {
-      if (!res.headersSent) res.status(502).json({ error: 'Failed to fetch video from storage' });
-      else res.destroy();
+    proxyHttpVideo(job.video_path, res, {
+      filename: job.name || job.id,
     });
     return;
   }

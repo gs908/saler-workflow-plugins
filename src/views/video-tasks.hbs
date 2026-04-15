@@ -424,13 +424,15 @@ function svUpdateDetail(id) {
   } else { errEl.style.display = 'none'; }
 
   const actions = document.getElementById('sv-d-actions');
+  let btns = '';
   if (job.status === 'completed') {
-    let btns = `<a class="sv-btn sv-btn-primary" href="${SV_API}/${job.id}/video" download>⬇ 下载视频</a>`;
+    btns += `<a class="sv-btn sv-btn-primary" href="${SV_API}/${job.id}/video" download>⬇ 下载视频</a>`;
     if (job.playlist_url || job.video_url) {
       btns += `<button class="sv-btn sv-btn-play" onclick="svOpenVideoModal('${job.playlist_url || ''}','${job.video_url || ''}')">▶ 播放视频</button>`;
     }
-    actions.innerHTML = btns;
-  } else { actions.innerHTML = ''; }
+  }
+  btns += `<button class="sv-btn" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;" onclick="svDeleteJob('${job.id}')">🗑 删除</button>`;
+  actions.innerHTML = btns;
 }
 
 function svShowForm() {
@@ -486,6 +488,17 @@ function svParseProgress(p) {
   if (p.includes('[INFO]')) return 2;
   if (p.includes('[完成]')) return 100;
   return 0;
+}
+
+// ── 删除字幕视频任务 ──
+async function svDeleteJob(jobId) {
+  if (!confirm('确认删除该任务？本地文件将一并清除。')) return;
+  const res = await fetch(`${SV_API}/${jobId}`, { method: 'DELETE' });
+  if (!res.ok) { alert('删除失败'); return; }
+  svSelectedId = null;
+  document.getElementById('sv-job-detail').style.display = 'none';
+  document.getElementById('sv-placeholder').style.display = 'flex';
+  await svLoadList();
 }
 
 // ── 字幕视频播放（复用 Claude 任务的视频弹框）──

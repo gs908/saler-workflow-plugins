@@ -72,3 +72,9 @@ const stmtList = db.prepare('SELECT * FROM subtitle_video_jobs ORDER BY created_
 export function listJobs(): SubtitleJobRow[] {
   return stmtList.all() as SubtitleJobRow[];
 }
+
+const stmtDelete = db.prepare<{ id: string }>('DELETE FROM subtitle_video_jobs WHERE id = @id');
+
+export function deleteJob(id: string): boolean {
+  return stmtDelete.run({ id }).changes > 0;
+}

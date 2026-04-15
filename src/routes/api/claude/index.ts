@@ -7,6 +7,7 @@ import { executeTask, subscribe, unsubscribeAll, resumeTask } from '../../../ser
 import { resetTaskForRetry, resetTaskForTweak } from '../../../services/claude/db';
 import { upload, getUploadedFilePaths } from '../../../services/claude/file-handler';
 import { getTask, getEventsByTaskId } from '../../../services/claude/db';
+import { proxyHttpVideo, buildContentDisposition } from '../../../utils/streaming-proxy';
 
 console.log('[Claude Module] >>> index.ts loaded at', new Date().toISOString());
 const router = Router();
@@ -195,7 +196,7 @@ router.get('/:taskId/stream', (req: Request, res: Response) => {
 /**
  * DELETE /:taskId - 删除任务
  */
-router.delete('/:taskId', (req: Request, res: Response) => {
+router.delete('/:taskId', async (req: Request, res: Response) => {
   const taskId = req.params.taskId as string;
   const task = taskManager.getSummary(taskId);
 
@@ -205,7 +206,7 @@ router.delete('/:taskId', (req: Request, res: Response) => {
   }
 
   unsubscribeAll(taskId);
-  taskManager.delete(taskId);
+  await taskManager.delete(taskId);
 
   res.json({ success: true, taskId, deletedStatus: task.status });
 });
@@ -336,13 +337,18 @@ router.get('/:taskId/video', (req: Request, res: Response) => {
     res.status(404).json({ error: '视频文件不存在' });
     return;
   }
-  if (!fs.existsSync(task.videoPath)) {
-    res.status(404).json({ error: '视频文件不存在于磁盘' });
+
+  // MinIO 模式：videoPath 是 HTTP URL，代理返回
+  if (task.videoPath.startsWith('http')) {
+    proxyHttpVideo(task.videoPath, res, {
+      filename: task.name || taskId,
+    });
     return;
   }
+
+  // local 模式：本地文件流式返回（去掉 existsSync TOCTOU 检查）
   const stat = fs.statSync(task.videoPath);
-  const filename = `${task.name || taskId}.mp4`;
-  const disposition = `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`;
+  const disposition = buildContentDisposition(task.name, taskId);
   const range = req.headers.range;
   if (range) {
     const [startStr, endStr] = range.replace(/bytes=/, '').split('-');

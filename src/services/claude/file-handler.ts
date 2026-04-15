@@ -48,9 +48,9 @@ export function getUploadedFilePaths(files: Express.Multer.File[] | undefined): 
 export function cleanupFiles(filePaths: string[]): void {
   for (const fp of filePaths) {
     try {
-      if (fs.existsSync(fp)) fs.unlinkSync(fp);
-    } catch {
-      // ignore cleanup errors
+      fs.unlinkSync(fp);
+    } catch (err) {
+      console.warn(`[FileHandler] Failed to delete file ${fp}:`, err);
     }
   }
 }

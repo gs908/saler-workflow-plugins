@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
 import {
   TaskStatus,
   TaskRow,
@@ -9,6 +10,7 @@ import {
   listTasks,
   deleteTask as deleteTaskFromDb,
 } from './db';
+import { cleanupFiles } from './file-handler';
 
 export type { TaskStatus };
 
@@ -148,7 +150,7 @@ class TaskManager {
     return true;
   }
 
-  delete(taskId: string): boolean {
+  async delete(taskId: string): Promise<boolean> {
     const row = getTask(taskId);
     if (!row) return false;
 
@@ -162,6 +164,25 @@ class TaskManager {
 
     // 清理 DB（tasks + task_events）
     deleteTaskFromDb(taskId);
+
+    // 清理 workDir（去掉 existsSync TOCTOU 检查）
+    if (row.workDir) {
+      try {
+        await fs.promises.rm(row.workDir, { recursive: true, force: true });
+      } catch (err) {
+        console.warn(`[TaskManager] Failed to delete workDir ${row.workDir}:`, err);
+      }
+    }
+
+    // 清理上传文件（临时目录）
+    if (row.uploadedFiles) {
+      try {
+        cleanupFiles(JSON.parse(row.uploadedFiles));
+      } catch (err) {
+        console.warn(`[TaskManager] Failed to cleanup uploaded files:`, err);
+      }
+    }
+
     return true;
   }
 
