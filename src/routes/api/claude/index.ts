@@ -340,8 +340,9 @@ router.get('/:taskId/video', (req: Request, res: Response) => {
 
   // MinIO 模式：videoPath 是 HTTP URL，代理返回
   if (task.videoPath.startsWith('http')) {
+    const filename = `${task.name || taskId}.mp4`;
     proxyHttpVideo(task.videoPath, res, {
-      filename: task.name || taskId,
+      filename,
     });
     return;
   }

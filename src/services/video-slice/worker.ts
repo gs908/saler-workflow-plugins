@@ -27,6 +27,10 @@ async function processNext(): Promise<void> {
   console.log(`[Slice Worker] job=${job.id} source=${job.source}`);
 
   const outputDir = path.join(config.hlsOutputDir, ...buildMinioPrefix(job.id, job.hlsDate, job.name).split('/'));
+  // 清理残留文件（重新执行时目录内可能有上次的切片/封面）
+  if (fs.existsSync(outputDir)) {
+    await safeRemoveDir(outputDir);
+  }
   fs.mkdirSync(outputDir, { recursive: true });
   const m3u8Path  = path.join(outputDir, 'index.m3u8');
   const coverPath = path.join(outputDir, COVER_FILENAME);
@@ -69,7 +73,7 @@ async function processNext(): Promise<void> {
 
 function execFfmpeg(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(config.ffmpegPath, args);
+    const proc = spawn(config.ffmpegPath, ['-y', ...args]);
     proc.stderr.on('data', (d) => process.stdout.write(`[ffmpeg] ${d}`));
     proc.on('close', (code) => {
       if (code === 0) resolve();
