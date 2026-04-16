@@ -91,6 +91,18 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_task_events_taskId ON task_events(taskId);
   CREATE INDEX IF NOT EXISTS idx_tasks_startTime ON tasks(startTime DESC);
+
+  CREATE TABLE IF NOT EXISTS callback_logs (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    taskId        TEXT    NOT NULL,
+    type          TEXT    NOT NULL,
+    status        TEXT    NOT NULL,
+    callbackUrl   TEXT    NOT NULL,
+    requestBody   TEXT    NOT NULL,
+    error         TEXT,
+    createdAt     INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_callback_logs_taskId ON callback_logs(taskId);
 `);
 
 // 兼容旧库：如果 sessionId 列不存在则加上
@@ -200,9 +212,11 @@ export function listTasks(): TaskRow[] {
 
 const stmtDeleteTask = db.prepare<{ id: string }>('DELETE FROM tasks WHERE id = @id');
 const stmtDeleteEvents = db.prepare<{ taskId: string }>('DELETE FROM task_events WHERE taskId = @taskId');
+const stmtDeleteCallbackLogs = db.prepare<{ taskId: string }>('DELETE FROM callback_logs WHERE taskId = @taskId');
 
-// 事务删除：同时清理 tasks 和 task_events
+// 事务删除：同时清理 tasks、task_events、callback_logs
 const deleteTaskTx = db.transaction((id: string) => {
+  stmtDeleteCallbackLogs.run({ taskId: id });
   stmtDeleteEvents.run({ taskId: id });
   stmtDeleteTask.run({ id });
 });
@@ -226,6 +240,34 @@ const stmtGetEvents = db.prepare<{ taskId: string }>('SELECT * FROM task_events 
 
 export function getEventsByTaskId(taskId: string): EventRow[] {
   return stmtGetEvents.all({ taskId }) as EventRow[];
+}
+
+// ---- Callback Log CRUD ----
+
+export interface CallbackLogRow {
+  id: number;
+  taskId: string;
+  type: string;       // 'auto' | 'manual'
+  status: string;     // 'success' | 'fail'
+  callbackUrl: string;
+  requestBody: string;
+  error: string | null;
+  createdAt: number;
+}
+
+const stmtInsertCallbackLog = db.prepare<Omit<CallbackLogRow, 'id'>>(`
+  INSERT INTO callback_logs (taskId, type, status, callbackUrl, requestBody, error, createdAt)
+  VALUES (@taskId, @type, @status, @callbackUrl, @requestBody, @error, @createdAt)
+`);
+
+export function insertCallbackLog(log: Omit<CallbackLogRow, 'id'>): void {
+  stmtInsertCallbackLog.run(log);
+}
+
+const stmtGetCallbackLogs = db.prepare<{ taskId: string }>('SELECT * FROM callback_logs WHERE taskId = @taskId ORDER BY id ASC');
+
+export function getCallbackLogsByTaskId(taskId: string): CallbackLogRow[] {
+  return stmtGetCallbackLogs.all({ taskId }) as CallbackLogRow[];
 }
 
 export default db;

@@ -118,6 +118,41 @@ body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f
 .btn-download:hover { background: #1d4ed8; }
 .btn-play { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
 .btn-play:hover { background: #dcfce7; }
+.btn-callback { background: #fff; color: #d97706; border: 1px solid #fbbf24; }
+.btn-callback:hover { background: #fef9c3; }
+.btn-callback:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-history { background: #fff; color: #64748b; border: 1px solid #cbd5e1; }
+.btn-history:hover { background: #f1f5f9; }
+
+/* 回调状态区 */
+.callback-area { margin-top: 14px; padding: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; }
+.callback-status { font-size: 12px; color: #92400e; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.callback-actions { display: flex; gap: 8px; }
+
+/* 回调历史弹窗 */
+.cb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center; }
+.cb-overlay.active { display:flex; }
+.cb-modal { background:#fff; border-radius:10px; width:640px; max-height:80vh; display:flex; flex-direction:column; }
+.cb-modal-header { padding:16px 20px; border-bottom:1px solid #e2e8f0; font-weight:600; font-size:15px; display:flex; justify-content:space-between; align-items:center; }
+.cb-modal-body { flex:1; overflow-y:auto; padding:16px 20px; }
+.cb-log-item { padding:12px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:10px; font-size:13px; }
+.cb-log-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.cb-badge { padding:2px 8px; border-radius:4px; font-size:11px; font-weight:500; }
+.cb-badge-auto { background:#dbeafe; color:#1d4ed8; }
+.cb-badge-manual { background:#fef3c7; color:#92400e; }
+.cb-badge-ok { background:#dcfce7; color:#166534; }
+.cb-badge-fail { background:#fee2e2; color:#991b1b; }
+.cb-log-detail { font-size:12px; color:#64748b; margin-top:6px; word-break:break-all; }
+.cb-log-detail summary { cursor:pointer; color:#2563eb; }
+.cb-log-detail pre { margin-top:6px; padding:8px; background:#f8fafc; border-radius:4px; overflow-x:auto; font-size:11px; }
+.cb-close { background:none; border:none; font-size:20px; cursor:pointer; color:#94a3b8; }
+.cb-close:hover { color:#1e293b; }
+
+/* toast */
+.sv-toast { position:fixed; top:20px; right:20px; padding:10px 20px; border-radius:6px; color:#fff; font-size:13px; z-index:2000; opacity:1; transition:opacity 0.3s; }
+.sv-toast-success { background:#16a34a; }
+.sv-toast-error { background:#dc2626; }
+.sv-toast-info { background:#2563eb; }
 
 /* 欢迎提示 */
 .welcome {
@@ -200,6 +235,7 @@ body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f
         <div class="progress-text" id="d-progress-text"></div>
       </div>
       <div id="d-error" style="display:none;margin-top:12px;padding:10px;background:#fee2e2;border-radius:6px;font-size:13px;color:#991b1b"></div>
+      <div id="d-callback-area" style="display:none" class="callback-area"></div>
       <div class="action-row" id="d-actions"></div>
     </div>
 
@@ -211,11 +247,24 @@ body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f
   </div>
 </div>
 
+<!-- 回调历史弹窗 -->
+<div class="cb-overlay" id="cbOverlay">
+  <div class="cb-modal">
+    <div class="cb-modal-header">
+      <span>回调推送历史</span>
+      <button class="cb-close" onclick="closeCallbackHistory()">&times;</button>
+    </div>
+    <div class="cb-modal-body" id="cbModalBody"></div>
+  </div>
+</div>
+
 <script>
 const API = '/saler-plugins/api/subtitle-video';
 let jobs = [];
 let selectedId = null;
 let pollTimer = null;
+let _callbackLogs = [];
+let _callbackLogsTaskId = null;
 
 // ── 初始化 ──
 document.addEventListener('DOMContentLoaded', () => {
@@ -325,6 +374,21 @@ function updateDetail(id) {
   } else {
     actions.innerHTML = '';
   }
+
+  // 回调区域（有 callback_url 的任务才显示）
+  const cbArea = document.getElementById('d-callback-area');
+  if (job.callback_url && (job.status === 'completed' || job.status === 'error')) {
+    // 只在切换任务或手动推送后才重新加载，避免轮询时重复请求
+    if (_callbackLogsTaskId !== job.id) {
+      _callbackLogsTaskId = job.id;
+      loadCallbackLogs(job.id);
+    }
+  } else {
+    cbArea.style.display = 'none';
+    cbArea.innerHTML = '';
+    _callbackLogs = [];
+    _callbackLogsTaskId = null;
+  }
 }
 
 // ── 新建表单 ──
@@ -411,5 +475,113 @@ function parseProgress(p) {
   // [完成]
   if (p.includes('[完成]')) return 100;
   return 0;
+}
+
+// ── 回调相关 ──
+
+async function loadCallbackLogs(jobId) {
+  try {
+    const res = await fetch(`${API}/${jobId}/callback-logs`);
+    const data = await res.json();
+    _callbackLogs = data.logs || [];
+    renderCallbackArea(jobId);
+  } catch(e) {
+    console.error('loadCallbackLogs error', e);
+  }
+}
+
+function renderCallbackArea(jobId) {
+  const cbArea = document.getElementById('d-callback-area');
+  const logs = _callbackLogs;
+
+  if (!logs.length) {
+    cbArea.style.display = 'block';
+    cbArea.innerHTML = `
+      <div class="callback-status">回调状态：暂无推送记录</div>
+      <div class="callback-actions">
+        <button class="btn-action btn-callback" id="btnManualCallback" onclick="handleManualCallback()">手动推送</button>
+      </div>`;
+    return;
+  }
+
+  const latest = logs[logs.length - 1];
+  const statusText = latest.status === 'success' ? '✅ 成功' : '❌ 失败';
+  const typeText = latest.type === 'manual' ? '手动' : '自动';
+
+  cbArea.style.display = 'block';
+  cbArea.innerHTML = `
+    <div class="callback-status">回调状态：${statusText}（${typeText}） ${fmtTime(latest.createdAt)}</div>
+    <div class="callback-actions">
+      <button class="btn-action btn-callback" id="btnManualCallback" onclick="handleManualCallback()">手动推送</button>
+      <button class="btn-action btn-history" onclick="showCallbackHistory()">查看历史 (${logs.length})</button>
+    </div>`;
+}
+
+function handleManualCallback() {
+  if (!selectedId) return;
+  const btn = document.getElementById('btnManualCallback');
+  btn.disabled = true;
+  btn.textContent = '推送中...';
+
+  fetch(`${API}/${selectedId}/callback`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.textContent = '手动推送';
+      if (data.success) {
+        showToast('推送成功', 'success');
+      } else {
+        showToast('推送失败: ' + (data.error || '未知错误'), 'error');
+      }
+      loadCallbackLogs(selectedId);
+    })
+    .catch(e => {
+      btn.disabled = false;
+      btn.textContent = '手动推送';
+      showToast('推送失败: ' + e.message, 'error');
+    });
+}
+
+function showCallbackHistory() {
+  const body = document.getElementById('cbModalBody');
+  if (!_callbackLogs.length) {
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">暂无推送记录</div>';
+  } else {
+    body.innerHTML = _callbackLogs.map(log => {
+      const typeLabel = log.type === 'manual' ? '手动' : '自动';
+      const typeCls = log.type === 'manual' ? 'cb-badge-manual' : 'cb-badge-auto';
+      const statusLabel = log.status === 'success' ? '✅ 成功' : '❌ 失败';
+      const statusCls = log.status === 'success' ? 'cb-badge-ok' : 'cb-badge-fail';
+      let reqJson = '';
+      try { reqJson = JSON.stringify(JSON.parse(log.requestBody), null, 2); } catch { reqJson = log.requestBody || ''; }
+      return `<div class="cb-log-item">
+        <div class="cb-log-row">
+          <span class="cb-badge ${typeCls}">${typeLabel}</span>
+          <span class="cb-badge ${statusCls}">${statusLabel}</span>
+          <span style="color:#94a3b8;font-size:11px">${fmtTime(log.createdAt)}</span>
+        </div>
+        <div style="font-size:11px;color:#64748b;word-break:break-all">URL: ${log.callbackUrl}</div>
+        ${log.error ? '<div style="color:#dc2626;font-size:11px;margin-top:4px">错误: ' + log.error + '</div>' : ''}
+        <details class="cb-log-detail"><summary>请求参数</summary><pre>${reqJson}</pre></details>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('cbOverlay').classList.add('active');
+}
+
+function closeCallbackHistory() {
+  document.getElementById('cbOverlay').classList.remove('active');
+}
+
+function showToast(message, type) {
+  var toast = document.createElement('div');
+  toast.className = 'sv-toast sv-toast-' + type;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, 2500);
 }
 </script>

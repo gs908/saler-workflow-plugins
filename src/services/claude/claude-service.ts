@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as os from 'os';
 import axios from 'axios';
 import { taskManager, TaskInfo } from './task-manager';
-import { insertEvent, updateTask } from './db';
+import { insertEvent, updateTask, insertCallbackLog } from './db';
 import { enqueue, buildMinioPrefix } from '../video-slice/worker';
 import { config } from '../video-slice/config';
 import { buildMinioUrl } from '../video-slice/minio-client';
@@ -221,9 +221,19 @@ async function triggerCallback(task: TaskInfo): Promise<void> {
       timeout: 10000,
     });
     console.log(`[Claude Task ${task.id}] Callback sent to ${task.callbackUrl}, outcome=${resultData.outcome}`);
+    insertCallbackLog({
+      taskId: task.id, type: 'auto', status: 'success',
+      callbackUrl: task.callbackUrl, requestBody: JSON.stringify(resultData),
+      error: null, createdAt: Date.now(),
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[Claude Task ${task.id}] Callback failed: ${msg}`);
+    insertCallbackLog({
+      taskId: task.id, type: 'auto', status: 'fail',
+      callbackUrl: task.callbackUrl, requestBody: JSON.stringify(resultData),
+      error: msg, createdAt: Date.now(),
+    });
   }
 }
 

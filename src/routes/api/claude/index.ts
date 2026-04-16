@@ -2,11 +2,12 @@ import { Router, Request, Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import axios from 'axios';
 import { taskManager } from '../../../services/claude/task-manager';
 import { executeTask, subscribe, unsubscribeAll, resumeTask } from '../../../services/claude/claude-service';
 import { resetTaskForRetry, resetTaskForTweak } from '../../../services/claude/db';
 import { upload, getUploadedFilePaths } from '../../../services/claude/file-handler';
-import { getTask, getEventsByTaskId } from '../../../services/claude/db';
+import { getTask, getEventsByTaskId, getCallbackLogsByTaskId, insertCallbackLog } from '../../../services/claude/db';
 import { proxyHttpVideo, buildContentDisposition } from '../../../utils/streaming-proxy';
 
 console.log('[Claude Module] >>> index.ts loaded at', new Date().toISOString());
@@ -326,6 +327,74 @@ router.get('/:taskId/status', (req: Request, res: Response) => {
   }
 
   res.json(summary);
+});
+
+/**
+ * GET /:taskId/callback-logs - 查询回调推送历史
+ */
+router.get('/:taskId/callback-logs', (req: Request, res: Response) => {
+  const taskId = req.params.taskId as string;
+  const task = getTask(taskId);
+  if (!task) {
+    res.status(404).json({ error: '任务不存在', taskId });
+    return;
+  }
+  const logs = getCallbackLogsByTaskId(taskId);
+  res.json({ logs });
+});
+
+/**
+ * POST /:taskId/callback - 手动推送回调
+ */
+router.post('/:taskId/callback', async (req: Request, res: Response) => {
+  const taskId = req.params.taskId as string;
+  const task = taskManager.get(taskId);
+
+  if (!task) {
+    res.status(404).json({ error: '任务不存在', taskId });
+    return;
+  }
+  if (!task.callbackUrl) {
+    res.status(400).json({ error: '该任务没有回调地址', taskId });
+    return;
+  }
+
+  // 构造回调 body（和自动回调逻辑一致）
+  const body: Record<string, unknown> = {
+    type:       'video_create',
+    taskId:     task.id,
+    execute_id: task.pipelineId ?? null,
+    sessionId:  task.sessionId ?? null,
+    outcome:    task.status === 'completed' ? 'success' : 'fail',
+  };
+  if (task.videoPath) body.video_url = task.videoPath;
+  if (task.playlistUrl) {
+    body.playlist_url = task.playlistUrl;
+    body.cover_url = task.playlistUrl.replace('index.m3u8', 'cover.jpg');
+  }
+
+  try {
+    await axios.post(task.callbackUrl, body, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 10000,
+    });
+    console.log(`[Claude Task ${taskId}] Manual callback sent`);
+    insertCallbackLog({
+      taskId, type: 'manual', status: 'success',
+      callbackUrl: task.callbackUrl, requestBody: JSON.stringify(body),
+      error: null, createdAt: Date.now(),
+    });
+    res.json({ success: true, taskId });
+  } catch (err: any) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[Claude Task ${taskId}] Manual callback failed: ${msg}`);
+    insertCallbackLog({
+      taskId, type: 'manual', status: 'fail',
+      callbackUrl: task.callbackUrl, requestBody: JSON.stringify(body),
+      error: msg, createdAt: Date.now(),
+    });
+    res.json({ success: false, taskId, error: msg });
+  }
 });
 
 /**

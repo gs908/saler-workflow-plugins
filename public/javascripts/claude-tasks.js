@@ -62,6 +62,16 @@ function bindEvents() {
   if (resumeBtn) resumeBtn.addEventListener('click', handleResumeTask);
   var retryBtn = document.getElementById('btnRetryTask');
   if (retryBtn) retryBtn.addEventListener('click', handleRetryTask);
+  var callbackBtn = document.getElementById('btnManualCallback');
+  if (callbackBtn) callbackBtn.addEventListener('click', handleManualCallback);
+  var historyBtn = document.getElementById('btnCallbackHistory');
+  if (historyBtn) historyBtn.addEventListener('click', showCallbackHistory);
+  document.getElementById('btnCloseCallbackHistory').addEventListener('click', function () {
+    document.getElementById('callbackHistoryOverlay').style.display = 'none';
+  });
+  document.getElementById('callbackHistoryOverlay').addEventListener('click', function (e) {
+    if (e.target === this) this.style.display = 'none';
+  });
   document.getElementById('btnClearOutput').addEventListener('click', clearOutput);
   document.getElementById('newTaskForm').addEventListener('submit', handleCreateTask);
 
@@ -553,6 +563,7 @@ function renderTaskList() {
     card.innerHTML =
       '<div class="ct-task-card-header">' +
         createStatusBadge(task.status) +
+        createSourceBadge(task.source) +
       '</div>' +
       '<div class="ct-task-card-prompt">' + escapeHtml(task.name || promptPreview) + '</div>' +
       '<div class="ct-task-card-meta">' +
@@ -675,6 +686,17 @@ function fillTaskInfo(task) {
     var canRetry = task.status === 'completed' || task.status === 'error' || task.status === 'cancelled';
     retryBtn.style.display = canRetry ? 'inline-flex' : 'none';
   }
+
+  // 回调推送区域：仅 API 来源 + 任务完成
+  var callbackArea = document.getElementById('infoCallbackArea');
+  var callbackLogsArea = document.getElementById('infoCallbackLogs');
+  if (task.source === 'api' && (task.status === 'completed' || task.status === 'error')) {
+    callbackArea.style.display = 'flex';
+    loadCallbackLogs(task.id);
+  } else {
+    callbackArea.style.display = 'none';
+    callbackLogsArea.style.display = 'none';
+  }
 }
 
 function createStatusBadge(status) {
@@ -689,6 +711,13 @@ function createStatusBadge(status) {
     '<span class="ct-status-dot"></span>' +
     (labels[status] || status) +
   '</span>';
+}
+
+function createSourceBadge(source) {
+  if (source === 'api') {
+    return '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:500;background:#fef3c7;color:#92400e;margin-left:6px;">API</span>';
+  }
+  return '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:500;background:#e0f2fe;color:#075985;margin-left:6px;">前端</span>';
 }
 
 function clearOutput() {
@@ -786,4 +815,107 @@ function closeVideoModal() {
   videoEl.src = '';
   if (_hlsInstance) { _hlsInstance.destroy(); _hlsInstance = null; }
   overlay.style.display = 'none';
+}
+
+// ---- 回调推送 ----
+
+// 缓存当前任务的回调历史
+var _callbackLogs = [];
+
+function loadCallbackLogs(taskId) {
+  fetch(API_BASE + '/' + taskId + '/callback-logs')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      _callbackLogs = data.logs || [];
+      renderCallbackArea(taskId, _callbackLogs);
+    })
+    .catch(function () {});
+}
+
+function renderCallbackArea(taskId, logs) {
+  var statusEl = document.getElementById('infoCallbackStatus');
+  var btnEl = document.getElementById('btnManualCallback');
+  var historyBtn = document.getElementById('btnCallbackHistory');
+
+  if (!logs.length) {
+    statusEl.innerHTML = '<span style="color:#94a3b8">未推送</span>';
+    btnEl.style.display = 'inline-flex';
+    historyBtn.style.display = 'none';
+    return;
+  }
+
+  var last = logs[logs.length - 1];
+  if (last.status === 'success') {
+    statusEl.innerHTML = '<span style="color:#16a34a">✅ 已推送</span> <span style="color:#94a3b8;font-size:11px">' + formatTime(last.createdAt) + '</span>';
+  } else {
+    statusEl.innerHTML = '<span style="color:#dc2626">❌ 推送失败</span> <span style="color:#94a3b8;font-size:11px">' + formatTime(last.createdAt) + '</span>';
+  }
+  btnEl.style.display = 'inline-flex';
+  historyBtn.style.display = logs.length > 0 ? 'inline-flex' : 'none';
+}
+
+function showCallbackHistory() {
+  var logs = _callbackLogs;
+  var content = document.getElementById('callbackHistoryContent');
+
+  if (!logs.length) {
+    content.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">暂无推送记录</div>';
+    document.getElementById('callbackHistoryOverlay').style.display = 'flex';
+    return;
+  }
+
+  var html = logs.slice().reverse().map(function (log, idx) {
+    var typeLabel = log.type === 'manual' ? '手动' : '自动';
+    var typeBg = log.type === 'manual' ? 'background:#fef3c7;color:#92400e' : 'background:#e0f2fe;color:#075985';
+    var statusHtml = log.status === 'success'
+      ? '<span style="color:#16a34a">✅ 成功</span>'
+      : '<span style="color:#dc2626">❌ 失败</span>';
+
+    var bodyStr = '';
+    try { bodyStr = JSON.stringify(JSON.parse(log.requestBody), null, 2); } catch(e) { bodyStr = log.requestBody; }
+
+    return '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+        '<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:500;' + typeBg + '">' + typeLabel + '</span>' +
+        statusHtml +
+        '<span style="color:#94a3b8;font-size:12px;margin-left:auto;">' + formatTime(log.createdAt) + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:#64748b;margin-bottom:4px;"><b>回调地址：</b>' + escapeHtml(log.callbackUrl) + '</div>' +
+      (log.error ? '<div style="font-size:12px;color:#dc2626;margin-bottom:4px;"><b>错误：</b>' + escapeHtml(log.error) + '</div>' : '') +
+      '<details style="margin-top:6px;"><summary style="font-size:12px;color:#2563eb;cursor:pointer;">请求参数</summary>' +
+        '<pre style="font-size:11px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:8px;margin-top:4px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;">' + escapeHtml(bodyStr) + '</pre>' +
+      '</details>' +
+    '</div>';
+  }).join('');
+
+  content.innerHTML = html;
+  document.getElementById('callbackHistoryOverlay').style.display = 'flex';
+}
+
+function handleManualCallback() {
+  var taskId = state.currentTaskId;
+  if (!taskId) return;
+
+  var btn = document.getElementById('btnManualCallback');
+  btn.disabled = true;
+  btn.textContent = '推送中...';
+
+  fetch(API_BASE + '/' + taskId + '/callback', { method: 'POST' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      btn.disabled = false;
+      btn.textContent = '手动推送';
+      if (data.success) {
+        showToast('推送成功', 'success');
+      } else {
+        showToast('推送失败: ' + (data.error || '未知错误'), 'error');
+      }
+      // 刷新回调历史
+      loadCallbackLogs(taskId);
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = '手动推送';
+      showToast('推送失败: ' + e.message, 'error');
+    });
 }

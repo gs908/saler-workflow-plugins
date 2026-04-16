@@ -3,8 +3,10 @@ import fs           from 'node:fs';
 import os           from 'node:os';
 import path         from 'node:path';
 import multer       from 'multer';
+import axios        from 'axios';
 import { enqueue, getJob } from '../../../services/subtitle-video/worker';
 import { listJobs, deleteJob } from '../../../services/subtitle-video/db';
+import { getCallbackLogsByTaskId, insertCallbackLog } from '../../../services/claude/db';
 import { proxyHttpVideo } from '../../../utils/streaming-proxy';
 
 const router = Router();
@@ -137,7 +139,7 @@ router.get('/:jobId/video', (req, res) => {
   // MinIO 模式：video_path 是 HTTP URL，代理返回
   if (job.video_path.startsWith('http')) {
     proxyHttpVideo(job.video_path, res, {
-      filename: job.name || job.id,
+      filename: `${job.name || job.id}.mp4`,
     });
     return;
   }
@@ -150,6 +152,71 @@ router.get('/:jobId/video', (req, res) => {
       }
     })
     .pipe(res);
+});
+
+/**
+ * GET /saler-plugins/api/subtitle-video/:jobId/callback-logs
+ * 查询回调推送历史
+ */
+router.get('/:jobId/callback-logs', (req, res) => {
+  const job = getJob(req.params.jobId);
+  if (!job) {
+    res.status(404).json({ error: 'Job not found' });
+    return;
+  }
+  const logs = getCallbackLogsByTaskId(job.id);
+  res.json({ logs });
+});
+
+/**
+ * POST /saler-plugins/api/subtitle-video/:jobId/callback
+ * 手动推送回调
+ */
+router.post('/:jobId/callback', async (req, res) => {
+  const job = getJob(req.params.jobId);
+  if (!job) {
+    res.status(404).json({ error: 'Job not found' });
+    return;
+  }
+  if (!job.callback_url) {
+    res.status(400).json({ error: '该任务没有回调地址' });
+    return;
+  }
+
+  const isCompleted = job.status === 'completed';
+  const body: Record<string, unknown> = {
+    type:       'video_create',
+    taskId:     job.id,
+    execute_id: job.execute_id ?? null,
+    outcome:    isCompleted ? 'success' : 'fail',
+  };
+  if (job.video_path)   body.video_url    = job.video_path;
+  if (job.playlist_url) body.playlist_url = job.playlist_url;
+  if (job.playlist_url) body.cover_url    = job.playlist_url.replace('index.m3u8', 'cover.jpg');
+  if (!isCompleted && job.error) body.error = job.error;
+
+  try {
+    await axios.post(job.callback_url, body, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 10000,
+    });
+    console.log(`[SubtitleVideo] job=${job.id} manual callback sent`);
+    insertCallbackLog({
+      taskId: job.id, type: 'manual', status: 'success',
+      callbackUrl: job.callback_url, requestBody: JSON.stringify(body),
+      error: null, createdAt: Date.now(),
+    });
+    res.json({ success: true, jobId: job.id });
+  } catch (err: any) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[SubtitleVideo] job=${job.id} manual callback failed: ${msg}`);
+    insertCallbackLog({
+      taskId: job.id, type: 'manual', status: 'fail',
+      callbackUrl: job.callback_url, requestBody: JSON.stringify(body),
+      error: msg, createdAt: Date.now(),
+    });
+    res.json({ success: false, jobId: job.id, error: msg });
+  }
 });
 
 export default router;

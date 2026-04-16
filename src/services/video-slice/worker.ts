@@ -4,7 +4,7 @@ import path from 'node:path';
 import axios from 'axios';
 import { config } from './config';
 import { uploadDir, buildMinioUrl } from './minio-client';
-import { updateTask } from '../claude/db';
+import { updateTask, insertCallbackLog } from '../claude/db';
 import { safeRemoveDir } from '../../utils/fs-utils';
 import type { Job } from './types';
 
@@ -162,8 +162,18 @@ async function postCallback(job: Job): Promise<void> {
       timeout: config.downstreamCallbackTimeoutMs,
     });
     console.log(`[Slice Worker] job=${job.id} callback sent outcome=${body.outcome}`);
+    insertCallbackLog({
+      taskId: job.taskId ?? job.id, type: 'auto', status: 'success',
+      callbackUrl: job.callbackUrl, requestBody: JSON.stringify(body),
+      error: null, createdAt: Date.now(),
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[Slice Worker] job=${job.id} callback failed: ${msg}`);
+    insertCallbackLog({
+      taskId: job.taskId ?? job.id, type: 'auto', status: 'fail',
+      callbackUrl: job.callbackUrl, requestBody: JSON.stringify(body),
+      error: msg, createdAt: Date.now(),
+    });
   }
 }

@@ -160,6 +160,14 @@
                 <button class="ct-btn ct-btn-sm ct-btn-primary" id="btnPlayVideo" style="margin-left:8px;">▶ 播放</button>
               </span>
             </div>
+            <div id="infoCallbackArea" style="display:none;" class="ct-info-row">
+              <span class="ct-info-label">推送状态</span>
+              <span class="ct-info-value">
+                <span id="infoCallbackStatus"></span>
+                <button class="ct-btn ct-btn-sm ct-btn-primary" id="btnManualCallback" style="margin-left:8px;display:none;">手动推送</button>
+                <button class="ct-btn ct-btn-sm ct-btn-ghost" id="btnCallbackHistory" style="margin-left:4px;display:none;">查看历史</button>
+              </span>
+            </div>
             <div class="ct-info-actions" id="infoActions">
               <button class="ct-btn ct-btn-danger" id="btnCancelTask" style="display:none;">取消任务</button>
               <button class="ct-btn ct-btn-primary" id="btnResumeTask" style="display:none;">续接执行</button>
@@ -315,6 +323,17 @@
     <div style="text-align:right;margin-top:8px;">
       <a id="modalVideoDownload" href="#" download style="color:#93c5fd;font-size:13px;text-decoration:none;">⬇ 下载 MP4</a>
     </div>
+  </div>
+</div>
+
+<!-- 回调推送历史弹框 -->
+<div id="callbackHistoryOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:10px;padding:24px;width:600px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;position:relative;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-size:15px;font-weight:600;color:#1e293b">推送历史</span>
+      <button id="btnCloseCallbackHistory" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;">&times;</button>
+    </div>
+    <div id="callbackHistoryContent" style="flex:1;overflow-y:auto;"></div>
   </div>
 </div>
 

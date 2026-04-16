@@ -9,6 +9,7 @@ import { enqueue as sliceEnqueue, buildMinioPrefix } from '../video-slice/worker
 import { config as sliceConfig }                    from '../video-slice/config';
 import { buildMinioUrl }                            from '../video-slice/minio-client';
 import { safeRemoveDir }                            from '../../utils/fs-utils';
+import { insertCallbackLog }                        from '../claude/db';
 import type { CreateSubtitleJobParams, SubtitleJobRow } from './types';
 
 const PYTHON_PATH = process.env.SUBTITLE_VIDEO_PYTHON_PATH || 'python';
@@ -153,17 +154,30 @@ function spawnPython(job: SubtitleJobRow, outputMp4: string, cfgPath: string, ti
 async function postFailCallback(job: SubtitleJobRow, error: string): Promise<void> {
   const url = job.callback_url;
   if (!url) return;
+
+  const body = {
+    type:       'video_create',
+    taskId:     job.id,
+    execute_id: job.execute_id ?? null,
+    outcome:    'fail',
+    error,
+  };
+
   try {
-    await axios.post(url, {
-      type:       'video_create',
-      taskId:     job.id,
-      execute_id: job.execute_id ?? null,
-      outcome:    'fail',
-      error,
-    }, { headers: { 'Content-Type': 'application/json' }, timeout: 10000 });
+    await axios.post(url, body, { headers: { 'Content-Type': 'application/json' }, timeout: 10000 });
     console.log(`[Subtitle Worker] job=${job.id} fail callback sent`);
+    insertCallbackLog({
+      taskId: job.id, type: 'auto', status: 'success',
+      callbackUrl: url, requestBody: JSON.stringify(body),
+      error: null, createdAt: Date.now(),
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[Subtitle Worker] job=${job.id} fail callback failed: ${msg}`);
+    insertCallbackLog({
+      taskId: job.id, type: 'auto', status: 'fail',
+      callbackUrl: url, requestBody: JSON.stringify(body),
+      error: msg, createdAt: Date.now(),
+    });
   }
 }
