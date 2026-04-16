@@ -143,6 +143,7 @@ router.post('/async', (req: Request, res: Response) => {
     pipelineId,
     callbackUrl:   resolvedCallbackUrl,
     uploadedFiles: allFiles.length > 0 ? allFiles : undefined,
+    source:        'api',
   });
 
   res.json({

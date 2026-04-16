@@ -29,6 +29,7 @@ export interface TaskRow {
   sessionId: string | null;
   videoPath: string | null;
   playlistUrl: string | null;
+  source: string | null;
 }
 
 export interface EventRow {
@@ -106,6 +107,9 @@ try {
 try {
   db.exec('ALTER TABLE tasks ADD COLUMN playlistUrl TEXT');
 } catch { /* 列已存在，忽略 */ }
+try {
+  db.exec("ALTER TABLE tasks ADD COLUMN source TEXT NOT NULL DEFAULT 'frontend'");
+} catch { /* 列已存在，忽略 */ }
 
 // 启动时将残留 running 状态的任务标为 error（服务重启导致任务中断）
 const staleCount = db.prepare(
@@ -118,8 +122,8 @@ if (staleCount > 0) {
 // ---- Task CRUD ----
 
 const stmtInsertTask = db.prepare<TaskRow>(`
-  INSERT INTO tasks (id, name, status, prompt, skill, workDir, model, startTime, endTime, error, uploadedFiles, pipelineId, callbackUrl, resultText, sessionId)
-  VALUES (@id, @name, @status, @prompt, @skill, @workDir, @model, @startTime, @endTime, @error, @uploadedFiles, @pipelineId, @callbackUrl, @resultText, @sessionId)
+  INSERT INTO tasks (id, name, status, prompt, skill, workDir, model, startTime, endTime, error, uploadedFiles, pipelineId, callbackUrl, resultText, sessionId, source)
+  VALUES (@id, @name, @status, @prompt, @skill, @workDir, @model, @startTime, @endTime, @error, @uploadedFiles, @pipelineId, @callbackUrl, @resultText, @sessionId, @source)
 `);
 
 export function insertTask(task: TaskRow): void {

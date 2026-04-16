@@ -32,6 +32,7 @@ export interface TaskInfo {
   sessionId?: string;  // Claude Code 会话 ID，用于续接执行
   videoPath?: string;
   playlistUrl?: string;
+  source?: string;
   abortController: AbortController;
 }
 
@@ -59,6 +60,7 @@ function rowToInfo(row: TaskRow): TaskInfo {
     sessionId:   row.sessionId   ?? undefined,
     videoPath:   row.videoPath   ?? undefined,
     playlistUrl: row.playlistUrl ?? undefined,
+    source:      row.source      ?? undefined,
     abortController: abortControllers.get(row.id) ?? new AbortController(),
   };
 }
@@ -73,6 +75,7 @@ class TaskManager {
     uploadedFiles?: string[];
     pipelineId?: string;
     callbackUrl?: string;
+    source?: string;
   }): TaskInfo {
     const id = uuidv4();
     const ac = new AbortController();
@@ -96,6 +99,7 @@ class TaskManager {
       sessionId:   null,
       videoPath:   null,
       playlistUrl: null,
+      source:      params.source ?? 'frontend',
     };
 
     insertTask(row);
