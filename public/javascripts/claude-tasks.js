@@ -689,13 +689,11 @@ function fillTaskInfo(task) {
 
   // 回调推送区域：仅 API 来源 + 任务完成
   var callbackArea = document.getElementById('infoCallbackArea');
-  var callbackLogsArea = document.getElementById('infoCallbackLogs');
   if (task.source === 'api' && (task.status === 'completed' || task.status === 'error')) {
     callbackArea.style.display = 'flex';
     loadCallbackLogs(task.id);
   } else {
     callbackArea.style.display = 'none';
-    callbackLogsArea.style.display = 'none';
   }
 }
 
