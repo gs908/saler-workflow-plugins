@@ -5,6 +5,7 @@ import axios from 'axios';
 import { config } from './config';
 import { uploadDir, buildMinioUrl } from './minio-client';
 import { updateTask } from '../claude/db';
+import { safeRemoveDir } from '../../utils/fs-utils';
 import type { Job } from './types';
 
 const COVER_FILENAME = 'cover.jpg';
@@ -41,7 +42,7 @@ async function processNext(): Promise<void> {
       await uploadDir(outputDir, prefix);
       job.playlistUrl = buildMinioUrl(`${prefix}/index.m3u8`);
       job.videoUrl = buildMinioUrl(`${prefix}/origin.mp4`);
-      fs.rmSync(outputDir, { recursive: true, force: true });
+      await safeRemoveDir(outputDir);
       console.log(`[Slice Worker] job=${job.id} uploaded to MinIO, local temp removed`);
       // 更新 videoPath 和 playlistUrl 为 MinIO URL
       if (job.taskId) updateTask(job.taskId, { playlistUrl: job.playlistUrl, videoPath: job.videoUrl });

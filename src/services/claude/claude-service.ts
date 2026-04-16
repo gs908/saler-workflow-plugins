@@ -247,6 +247,16 @@ export async function executeTask(task: TaskInfo, resumeSessionId?: string): Pro
   });
 
   let accumulatedText = '';
+  let lastPersistedTextLen = 0;
+
+  // 定期将累积文本刷入 DB，防止 for-await 挂住时文本丢失
+  const TEXT_PERSIST_INTERVAL_MS = 3000;
+  const textPersistTimer = setInterval(() => {
+    if (accumulatedText.length > lastPersistedTextLen) {
+      taskManager.updateResultText(task.id, accumulatedText);
+      lastPersistedTextLen = accumulatedText.length;
+    }
+  }, TEXT_PERSIST_INTERVAL_MS);
 
   try {
     const q = query({
@@ -285,8 +295,17 @@ export async function executeTask(task: TaskInfo, resumeSessionId?: string): Pro
         }
 
         broadcastAndPersist(task.id, event.event, event.data);
+
+        // result 是 Claude Code 的最终消息，收到后主动退出循环
+        // 防止 SDK 异步生成器未关闭导致 for-await 永远挂住
+        if (message.type === 'result') {
+          console.log(`[Claude Task ${task.id}] Received result message, breaking loop`);
+          break;
+        }
       }
     }
+
+    clearInterval(textPersistTimer);
 
     const finalStatus = task.abortController.signal.aborted ? 'cancelled' : 'completed';
     taskManager.updateStatus(task.id, finalStatus);
@@ -304,6 +323,7 @@ export async function executeTask(task: TaskInfo, resumeSessionId?: string): Pro
 
     broadcastAndPersist(task.id, 'error', { type: 'error', error: errorMsg, taskId: task.id });
   } finally {
+    clearInterval(textPersistTimer);
     const latestTask = taskManager.get(task.id);
     broadcastAndPersist(task.id, 'done', {
       taskId: task.id,

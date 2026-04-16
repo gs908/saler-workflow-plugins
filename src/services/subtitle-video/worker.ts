@@ -8,6 +8,7 @@ import { insertJob, updateJob, getJob } from './db';
 import { enqueue as sliceEnqueue, buildMinioPrefix } from '../video-slice/worker';
 import { config as sliceConfig }                    from '../video-slice/config';
 import { buildMinioUrl }                            from '../video-slice/minio-client';
+import { safeRemoveDir }                            from '../../utils/fs-utils';
 import type { CreateSubtitleJobParams, SubtitleJobRow } from './types';
 
 const PYTHON_PATH = process.env.SUBTITLE_VIDEO_PYTHON_PATH || 'python';
@@ -81,13 +82,13 @@ async function processJob(
     const msg = err instanceof Error ? err.message : String(err);
     updateJob(job.id, { status: 'error', error: msg });
     // 失败时保留本地文件用于调试，只清理临时配置目录
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    await safeRemoveDir(tmpDir);
     console.error(`[Subtitle Worker] job=${job.id} failed, preserving videoDir for debug: ${videoDir}`);
     await postFailCallback(job, msg);
     return;
   }
   // 成功后清理临时配置目录（视频目录保留给切片服务处理）
-  fs.rmSync(tmpDir, { recursive: true, force: true });
+  await safeRemoveDir(tmpDir);
 
   // origin.mp4 与 HLS 切片同目录，uploadDir/rmSync 会一并处理
   const videoUrl = sliceConfig.storageType === 'minio'
