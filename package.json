@@ -11,7 +11,7 @@
     "postinstall": "pnpm rebuild better-sqlite3"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.80",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.110",
     "@coze/api": "^1.3.9",
     "axios": "^1.13.6",
     "better-sqlite3": "^12.8.0",
