@@ -562,7 +562,7 @@ function renderTaskList() {
 
     card.innerHTML =
       '<div class="ct-task-card-header">' +
-        createStatusBadge(task.status) +
+        createStatusBadge(task.status, task.videoPath) +
         createSourceBadge(task.source) +
       '</div>' +
       '<div class="ct-task-card-prompt">' + escapeHtml(task.name || promptPreview) + '</div>' +
@@ -647,7 +647,7 @@ function refreshTaskDetail(taskId) {
 function fillTaskInfo(task) {
   document.getElementById('infoTaskId').textContent = task.id ? task.id.substring(0, 8) + '...' : '-';
   document.getElementById('infoTaskId').title = task.id || '';
-  document.getElementById('infoStatus').innerHTML = createStatusBadge(task.status);
+  document.getElementById('infoStatus').innerHTML = createStatusBadge(task.status, task.videoPath);
   document.getElementById('infoSkill').textContent = task.skill || '无';
   document.getElementById('infoWorkDir').textContent = task.workDir || '-';
   document.getElementById('infoPrompt').textContent = task.prompt || '-';
@@ -687,9 +687,9 @@ function fillTaskInfo(task) {
     retryBtn.style.display = canRetry ? 'inline-flex' : 'none';
   }
 
-  // 回调推送区域：仅 API 来源 + 任务完成
+  // 回调推送区域：仅 API 来源 + 真正已完成（有视频）
   var callbackArea = document.getElementById('infoCallbackArea');
-  if (task.source === 'api' && (task.status === 'completed' || task.status === 'error')) {
+  if (task.source === 'api' && task.status === 'completed' && task.videoPath) {
     callbackArea.style.display = 'flex';
     loadCallbackLogs(task.id);
   } else {
@@ -697,7 +697,11 @@ function fillTaskInfo(task) {
   }
 }
 
-function createStatusBadge(status) {
+function createStatusBadge(status, videoPath) {
+  if (status === 'completed' && !videoPath) {
+    return '<span class="ct-status ct-status-no-video">' +
+      '<span class="ct-status-dot"></span>无视频</span>';
+  }
   var labels = {
     pending: '等待中',
     running: '运行中',

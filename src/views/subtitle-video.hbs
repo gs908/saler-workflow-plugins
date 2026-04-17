@@ -377,7 +377,7 @@ function updateDetail(id) {
 
   // 回调区域（有 callback_url 的任务才显示）
   const cbArea = document.getElementById('d-callback-area');
-  if (job.callback_url && (job.status === 'completed' || job.status === 'error')) {
+  if (job.callback_url && job.status === 'completed' && job.video_path) {
     // 只在切换任务或手动推送后才重新加载，避免轮询时重复请求
     if (_callbackLogsTaskId !== job.id) {
       _callbackLogsTaskId = job.id;

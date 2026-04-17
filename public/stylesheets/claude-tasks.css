@@ -293,6 +293,7 @@
 .ct-status-completed { background: #dcfce7; color: #15803d; }
 .ct-status-cancelled { background: #fef3c7; color: #b45309; }
 .ct-status-error { background: #fee2e2; color: #dc2626; }
+.ct-status-no-video { background: #fef3c7; color: #b45309; }
 
 .ct-status-dot {
   width: 6px;
@@ -308,6 +309,7 @@
 .ct-status-completed .ct-status-dot { background: #22c55e; }
 .ct-status-cancelled .ct-status-dot { background: #f59e0b; }
 .ct-status-error .ct-status-dot { background: #ef4444; }
+.ct-status-no-video .ct-status-dot { background: #f59e0b; }
 
 @keyframes ct-pulse {
   0%, 100% { opacity: 1; }
