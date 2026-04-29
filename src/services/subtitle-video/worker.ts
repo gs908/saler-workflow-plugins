@@ -12,9 +12,21 @@ import { safeRemoveDir }                            from '../../utils/fs-utils';
 import { insertCallbackLog }                        from '../claude/db';
 import type { CreateSubtitleJobParams, SubtitleJobRow } from './types';
 
-const PYTHON_PATH = process.env.SUBTITLE_VIDEO_PYTHON_PATH || 'python';
 const FONT_PATH   = process.env.SUBTITLE_VIDEO_FONT_PATH   || '';
 const SCRIPT_PATH = path.join(__dirname, '..', '..', '..', 'scripts', 'generate_video.py');
+
+const PYTHON_PATH = process.env.SUBTITLE_VIDEO_PYTHON_PATH || '';
+const UV_PATH     = process.env.SUBTITLE_VIDEO_UV_PATH     || 'uv';
+const UV_PROJECT  = process.env.UV_REPORT_VIDEO_PROJECT    || '';
+const PY_CMD = PYTHON_PATH || UV_PATH;
+let PY_PREFIX: string[];
+if (PYTHON_PATH) {
+  PY_PREFIX = [SCRIPT_PATH];
+} else if (UV_PROJECT) {
+  PY_PREFIX = ['run', '--project', UV_PROJECT, SCRIPT_PATH];
+} else {
+  PY_PREFIX = ['run', SCRIPT_PATH];
+}
 
 export { getJob };
 
@@ -118,8 +130,8 @@ async function processJob(
 
 function spawnPython(job: SubtitleJobRow, outputMp4: string, cfgPath: string, title?: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const py = spawn(PYTHON_PATH, [
-      SCRIPT_PATH,
+    const py = spawn(PY_CMD, [
+      ...PY_PREFIX,
       '--config', cfgPath,
       '--audio',  job.audio_path,
       '--txt',    job.txt_path,
