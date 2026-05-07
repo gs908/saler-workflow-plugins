@@ -109,8 +109,22 @@ def load_font(font_path, size):
             return ImageFont.truetype(font_path, size)
         except Exception:
             pass
+    # Windows 字体
     for name in ['msyh.ttc', 'simhei.ttf', 'simsun.ttc']:
         p = f'C:/Windows/Fonts/{name}'
+        if Path(p).exists():
+            try:
+                return ImageFont.truetype(p, size)
+            except Exception:
+                continue
+    # Linux 字体 (Noto Sans CJK)
+    linux_fonts = [
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/truetype/arphic/ukai.ttc',  # AR PL UKai
+        '/usr/share/fonts/truetype/arphic/uming.ttc', # AR PL UMing
+    ]
+    for p in linux_fonts:
         if Path(p).exists():
             try:
                 return ImageFont.truetype(p, size)
@@ -119,9 +133,21 @@ def load_font(font_path, size):
     return ImageFont.load_default()
 
 def load_font_bold(font_path, size):
-    # 优先尝试粗体变体
+    # Windows 粗体变体
     for name in ['msyhbd.ttc', 'simhei.ttf', 'msyh.ttc']:
         p = f'C:/Windows/Fonts/{name}'
+        if Path(p).exists():
+            try:
+                return ImageFont.truetype(p, size)
+            except Exception:
+                continue
+    # Linux 字体 (Noto Sans CJK Bold)
+    linux_fonts = [
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
+        '/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc',
+    ]
+    for p in linux_fonts:
         if Path(p).exists():
             try:
                 return ImageFont.truetype(p, size)
