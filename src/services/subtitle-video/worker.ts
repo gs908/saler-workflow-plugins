@@ -75,7 +75,7 @@ async function processJob(
   fs.mkdirSync(tmpDir,   { recursive: true });
 
   const cfg = {
-    video:      { width: 1280, height: 720, fps: 30 },
+    video:      { width: 810, height: 1080, fps: 30 },
     background: { type: 'color', colorFrom: '#f8faff', colorTo: '#eef4ff' },
     font:       { path: FONT_PATH, sizeCurrent: 42, sizeContext: 20, sizeSpeaker: 20 },
     layout:     { linesAbove: 2, linesBelow: 2, lineSpacing: 20 },

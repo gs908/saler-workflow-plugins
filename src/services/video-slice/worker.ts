@@ -31,11 +31,14 @@ async function processNext(): Promise<void> {
   const m3u8Path  = path.join(outputDir, 'index.m3u8');
   const coverPath = path.join(outputDir, COVER_FILENAME);
 
+  let duration: number | undefined;
   try {
     await Promise.all([
       runFfmpeg(job.source, m3u8Path),
       extractCover(job.source, coverPath),
     ]);
+
+    duration = await getDuration(job.source);
 
     if (config.storageType === 'minio') {
       const prefix = buildMinioPrefix(job.id, job.hlsDate, job.name);
@@ -55,7 +58,7 @@ async function processNext(): Promise<void> {
     job.status = 'done';
     if (job.onDone) job.onDone(job.playlistUrl);
     console.log(`[Slice Worker] job=${job.id} done playlist=${job.playlistUrl}`);
-    await postCallback(job);
+    await postCallback(job, duration);
   } catch (err) {
     job.status = 'fail';
     job.error = err instanceof Error ? err.message : String(err);
@@ -128,7 +131,24 @@ export function buildJobUrls(jobId: string, hlsDate: string, name?: string): { p
   };
 }
 
-async function postCallback(job: Job): Promise<void> {
+function getDuration(source: string): Promise<number | undefined> {
+  const ffprobe = config.ffmpegPath.replace(/ffmpeg([^/\\]*)$/i, 'ffprobe$1');
+  return new Promise((resolve) => {
+    const proc = spawn(ffprobe, [
+      '-v', 'quiet', '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1', source,
+    ]);
+    let out = '';
+    proc.stdout.on('data', (d: Buffer) => (out += d));
+    proc.on('close', (code) => {
+      const n = code === 0 ? parseFloat(out.trim()) : NaN;
+      resolve(isNaN(n) ? undefined : n);
+    });
+    proc.on('error', () => resolve(undefined));
+  });
+}
+
+async function postCallback(job: Job, duration?: number): Promise<void> {
   // 无回调地址时只存库不回调
   if (!job.callbackUrl) {
     console.log(`[Slice Worker] job=${job.id} 无回调地址，跳过 POST`);
@@ -140,6 +160,7 @@ async function postCallback(job: Job): Promise<void> {
     taskId:     job.taskId ?? null,
     execute_id: job.execute_id ?? null,
     outcome:    'success', // 视频本身成功，切片失败属于降级，不影响整体结果
+    ...(duration != null ? { duration: Math.round(duration * 10) / 10 } : {}),
   };
 
   // MinIO 模式：path 用 MinIO URL，本地模式：path 用本地路径
